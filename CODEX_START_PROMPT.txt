@@ -1,0 +1,24 @@
+Implement the first unfinished build task for Synlet.
+
+First read AGENTS.md, docs/CODEX_BUILD_BRIEF.md, docs/BUILD_BACKLOG.md and
+relevant sections of docs/architecture/synlet-soma-architecture.html.
+Inspect the current repository and preserve unrelated changes.
+
+Use the modular monolith and ports/adapters design in this blueprint. Start at
+T00 only when there is no existing implementation; otherwise verify previous
+milestones and continue from the earliest unmet exit condition.
+
+For this run, implement ONE complete task card and its tests, not the entire
+backlog. Prefer a small working vertical slice to a collection of TODO stubs.
+Use mock inference by default. Do not download model weights, call cloud models,
+publish, install system services or enable external access without authorisation.
+
+Keep the core independent from model/runtime/storage providers. Validate all
+boundaries, enforce host permissions, preserve original evidence and bound every
+loop, queue, context packet and worker request.
+
+Run the task's checks and record evidence in docs/progress/<task-id>.md.
+Report changed files, commands and real results, skipped checks, remaining risks,
+and the exact next task. Do not claim that this HTML or the mock mode is a working
+LLM system or a model benchmark. Stop when this task's exit conditions are met,
+or report a specific blocker with the work completed so far.

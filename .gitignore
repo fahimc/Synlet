@@ -1,0 +1,40 @@
+# Secrets and local state
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.gitea-publish-state.json
+publish-result.json
+
+# Dependencies and builds
+node_modules/
+dist/
+build/
+coverage/
+.venv/
+__pycache__/
+*.py[cod]
+
+# Local model weights, context stores and generated artifacts
+*.gguf
+*.safetensors
+*.onnx
+*.pt
+*.pth
+*.sqlite
+*.sqlite3
+*.db
+*.db-wal
+*.db-shm
+*.log
+runtime-data/
+model-weights/
+playwright/.auth/
+playwright-report/
+test-results/
+
+# Operating system/editor local files
+.DS_Store
+Thumbs.db
+.vscode/*.local.json

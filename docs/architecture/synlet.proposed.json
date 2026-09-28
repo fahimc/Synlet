@@ -1,0 +1,121 @@
+{
+  "schema": "synlet.proposed/v0.1",
+  "status": "DESIGN_ONLY_NOT_IMPLEMENTED",
+  "public_model": "synlet-local",
+  "bind_host": "127.0.0.1",
+  "gateway_port": 43127,
+  "paths": {
+    "model_root": "<chosen-drive>/synlet/models",
+    "data_root": "<chosen-drive>/synlet/data",
+    "workspace_root": "<approved-workspace>"
+  },
+  "models": {
+    "router": {
+      "repo": "SupersonicLabs/Julia-1",
+      "runtime": "pinned-python-cpu",
+      "input_cap": 1024
+    },
+    "controller": {
+      "repo": "openbmb/MiniCPM5-2B-GGUF",
+      "file": "MiniCPM5-2B-Q4_K_M.gguf",
+      "context": 16384,
+      "generation_reserve": 4096
+    },
+    "code": {
+      "repo": "IFM/K2-Horizon-3.7B-GGUF",
+      "file": "K2-Horizon-4B-Q4_K_M.gguf",
+      "context": 16384,
+      "generation_reserve": 4096
+    },
+    "math": {
+      "repo": "mradermacher/Nanbeige4.1-3B-GGUF",
+      "file": "Nanbeige4.1-3B.Q4_K_M.gguf",
+      "context": 16384,
+      "generation_reserve": 4096
+    },
+    "vision": {
+      "repo": "LiquidAI/LFM2.5-VL-3B-GGUF",
+      "file": "LFM2.5-VL-3B-Q4_K_M.gguf",
+      "projector": "mmproj-LFM2.5-VL-3B-Q8_0.gguf",
+      "context": 8192,
+      "generation_reserve": 1024
+    },
+    "compactor": {
+      "repo": "lmstudio-community/Qwen3.5-0.8B-GGUF",
+      "file": "Qwen3.5-0.8B-Q4_K_M.gguf",
+      "context": 8192,
+      "generation_reserve": 1024,
+      "thinking": false,
+      "text_only": true
+    },
+    "embedding": {
+      "repo": "google/embeddinggemma-300m",
+      "runtime": "pinned-python-cpu",
+      "dimensions": 768,
+      "max_input_tokens": 2048
+    }
+  },
+  "scheduler": {
+    "max_gpu_generations": 1,
+    "max_resident_generative_models": 2,
+    "vram_headroom_gib": 2,
+    "admission": "measured_profiles_plus_live_free_memory",
+    "max_pending_inference_jobs": 16,
+    "maintenance_concurrency": 1,
+    "heartbeat_seconds": 5,
+    "lease_seconds": 30,
+    "interactive_priority": true,
+    "writes_require_reconciliation": true
+  },
+  "context": {
+    "chunk_target_tokens": [
+      400,
+      800
+    ],
+    "lookup_max_tokens": 3000,
+    "controller_input_cap": 11264,
+    "safety_margin_tokens": 1024,
+    "trigger_fraction_of_input_cap": 0.75,
+    "target_fraction_of_input_cap": 0.55,
+    "max_lookup_rounds": 3,
+    "source_preserving": true
+  },
+  "execution": {
+    "max_model_steps": 12,
+    "max_validation_retries": 2,
+    "max_repair_retries": 2,
+    "cloud_fallback": false,
+    "shell_default": "blocked",
+    "external_writes": "approval_required"
+  },
+  "release_gate": {
+    "pin_all_revisions": true,
+    "require_sha256": true,
+    "require_runtime_smoke_tests": true,
+    "licence_review_required": true
+  },
+  "blueprint_version": "0.2",
+  "architecture": {
+    "style": "modular-monolith-with-isolated-workers",
+    "composition_root": "apps/server/src/bootstrap",
+    "deployment_profile": "local-12gb",
+    "api_version": "v1",
+    "worker_protocol_version": "v1",
+    "default_tenancy": "single-local-user-project-scoped",
+    "codex_runtime_dependency": false,
+    "name": "SOMA",
+    "full_name": "Specialist Orchestration and Memory Architecture"
+  },
+  "build": {
+    "default_mode": "mock",
+    "node_baseline": "24 LTS; exact tested patch to be locked in T00",
+    "required_locks": [
+      "pnpm-lock.yaml",
+      "services/python-worker/uv.lock",
+      "config/models.lock.json",
+      "config/toolchains.lock.json"
+    ],
+    "schema_source": "packages/contracts/schemas/v1",
+    "network_export_default": false
+  }
+}
