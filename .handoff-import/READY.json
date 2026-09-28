@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "encoding": "base64-lzma-json",
+  "payload_sha256": "3b17a213a0793e8d0617fd329e9d78af6bb872adb96ac3e32f7b0f3a9c5a2364",
+  "payload_bytes": 68220,
+  "decoded_bytes": 1207930,
+  "parts": [
+    {"file":"part-000.b64","sha256":"52316233c960a3e95736db3d63888c3c81b3c0fb4cb1f8b52707aa69cd5ee0d4","git_blob":"51340bd013f6743083e4b2324e54d7a6bc519fc7","bytes":9001},
+    {"file":"part-001.b64","sha256":"c895cbdd380425108353d1ccf1c93e29ecd0394abe2bd56a0410564f3269ed32","git_blob":"82d9cb4e69d7d16f08f0992371c3d98a40bae825","bytes":9001},
+    {"file":"part-002.b64","sha256":"4c8c649cba370988b9a0b601eada0be9f0b7983a0898a15ea31e67f4a2a9812d","git_blob":"ffd26eb2d908d5df9451ef0dc000ae6e25d371d2","bytes":9001},
+    {"file":"part-003.b64","sha256":"35df052724a219a2a9aba25d87f2703a54e85c41f60f21f4c1fe9195ff8676c1","git_blob":"ce6ae38b9563ab8771b4d89684a839d4a8812373","bytes":9001},
+    {"file":"part-004.b64","sha256":"3d6ce80045659b19eda05c822a29cf75ee725f8e794581e236024ce0a86fe21e","git_blob":"125b7c8434618c21df8129ae3c629c3bdc310b49","bytes":9001},
+    {"file":"part-005.b64","sha256":"29ccbcb580d44f2ea3be6c2f228ab3b38201a3b23e43bba70e6bf4ac8395e2ea","git_blob":"c7188b9b43bfa2206f70dd71c81113e790029c5a","bytes":9001},
+    {"file":"part-006.b64","sha256":"60ca6e3c5feb9e663ae7c1292606dbb12367457a9625bd02bac6dae72f8db546","git_blob":"b404e1b4485b2718a74b6b61fce57b12c13a3f76","bytes":9001},
+    {"file":"part-007.b64","sha256":"45429b086b11378fa101629151bfcd11bb73dbe1d14c078a6c5ac1ca03c38668","git_blob":"72bc2cbe9eff6aef2ac1f310dc21743027aabf1d","bytes":9001},
+    {"file":"part-008.b64","sha256":"01921f2481da44c58a58cd3196cad62c3f0b0112f369e76e0d23320a37c66804","git_blob":"50ca66ac99780216f95d2c3b1affca7f40c783ad","bytes":9001},
+    {"file":"part-009.b64","sha256":"b81caee1421631e1ebd8b0895b252c05da24daa0dbb193a40be6d91171e7440c","git_blob":"69488cbc167e6816412623caa7ef5e67f722b5b6","bytes":9001},
+    {"file":"part-010.b64","sha256":"d04b5e05ac2c773a252bb56c3d6aca5ae112ef02c28fc661d113db166e931155","git_blob":"64b0ec23984359c160aac79d040da8f3dc3ef22d","bytes":961}
+  ],
+  "expected_files": {
+    ".agents/skills/synlet-build/SKILL.md":"5015d23db1361cda4a92e499aa96a65fa10284d775d7406e1a8117fdaf95c265",
+    ".editorconfig":"251db34e2e35b25bcd7888df2be0f92d56e0e204a405e1374e691710ed583827",
+    ".gitattributes":"f389c60cab509224a92f0b92b6d198e9e909fe500b9ca2a576f439b5639c80a5",
+    ".gitignore":"a8fed2f55d144930a853f23971c0af828f52e3345b60f202765eeb71c12b551b",
+    "AGENTS.md":"1d6b9f3639882c84c1adefa3fac3fd182ff6d1543ae925cbbb7612b1b2dd4ce4",
+    "CODEX_START_PROMPT.txt":"aa306f14d79505e455196061f318c47c3d2b0bd4745517a1f848d541e5436c25",
+    "README.md":"9add669190b2cc756c5a0aa26272c26996468f39e1cdfb4b3d5312ba905bce5f",
+    "archive/README.md":"bf13977145faad11ace848dac8641a44addb83b2e48c89c334a8711d4fbc4545",
+    "archive/originals/collective-codex-handoff-v0.2.zip":"0cc80512a55e2a11dcceeb92d84fa08d529c23ec51837c379b337a2e5ce0a6b0",
+    "archive/originals/collective-gitea-publish.zip":"7fd8bc59326afe495214819229d2ab18006fd216862cb7d1f8b31691a1005323",
+    "archive/originals/collective-llm-architecture-v0.2.html":"75173aa2ac3e71f9d909b89432106cc49abb0b5ac01ff856a8d4855a1d71579b",
+    "archive/originals/collective-llm-architecture.html":"2939b0bfca9482310703662ade82a1c5059537164a0d53e1b3a11059eea910ee",
+    "docs/BUILD_BACKLOG.md":"dd72623b5dbd45b3d740066299226ee2db9bf2ecc92b0774992362c8d6408e56",
+    "docs/CODEX_BUILD_BRIEF.md":"4cf6efcc878bc481b52096066f634e18c2347b68c212abea280f6b28b6af9b90",
+    "docs/CODEX_HANDOFF_README.md":"97b210bebf238015b242ec3d271ec09dfcb112ecc736aba37549ea5f2cd8ff00",
+    "docs/MODULE_MAP.md":"3a3a56b949214cd403b1fae9478040880a919571779341bd61a2e09383f21927",
+    "docs/architecture/ports.example.ts":"553208a68b550f282586c05267493f54bcc47f1a64365556946988649261c65c",
+    "docs/architecture/synlet-soma-architecture.html":"12f115716739c57e0cefef26876f49b16c676b6d7345ab2bcc24e741156ef0d8",
+    "docs/architecture/synlet.proposed.json":"c4c82679d51de50f4fddcea48ea69ee3aba725cb7926d8a023325ac00b83f16d",
+    "docs/progress/PROGRESS_TEMPLATE.md":"b1edcc1d34076912d89cd2102e1fcadbdd4b15fe65537e1823f1e590c400fbc9",
+    "HANDOFF_FILES.sha256":"48b2e057566d775954084a97c84c3901f786ba65f6525b31fa47f41818b2d953"
+  }
+}
