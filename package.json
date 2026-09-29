@@ -35,7 +35,8 @@
     "typecheck": "tsc -b --pretty false && tsc --noEmit -p apps/web --pretty false && node scripts/materialize-workspace-packages.mjs",
     "test:context": "pnpm build && node --test tests/eval/*.test.mjs",
     "test:deterministic": "pnpm test:unit && pnpm test:contracts && pnpm test:integration && pnpm test:security && pnpm test:context",
-    "test:python-contracts": "python scripts/test-python-contracts.py"
+    "test:python-contracts": "python scripts/test-python-contracts.py",
+    "eval:harness": "node scripts/eval-harness.mjs"
   },
   "devDependencies": {
     "@codedia/parser": "0.2.1",

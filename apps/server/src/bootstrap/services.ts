@@ -240,9 +240,12 @@ export async function createServices(
         : [];
     }),
   ];
+  const modelStrategy = process.env.SYNLET_MODEL_STRATEGY ?? "adaptive";
+  if (modelStrategy !== "adaptive" && modelStrategy !== "controller-only")
+    throw new DomainError("INVALID_OUTPUT", "Unknown SYNLET_MODEL_STRATEGY");
   const compactor = new ModelSourcePreservingCompactor(
     model,
-    firstLlm.modelId,
+    modelStrategy === "controller-only" ? controller.modelId : firstLlm.modelId,
     300_000,
   );
   const agent = new AgentHarness(
@@ -262,7 +265,8 @@ export async function createServices(
       maxOutputTokens: -1,
       timeoutMs: 300_000,
       reasoning: controller.reasoning ?? "auto",
-      specialists,
+      specialists: modelStrategy === "controller-only" ? [] : specialists,
+      modelStrategy,
       maxPending: profile.limits.maxPendingTasks,
     },
     {

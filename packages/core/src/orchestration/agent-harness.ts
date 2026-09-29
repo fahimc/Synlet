@@ -41,6 +41,7 @@ interface Specialist {
   readonly reasoning: "disabled" | "enabled" | "auto";
 }
 export interface AgentHarnessOptions {
+  readonly modelStrategy?: "adaptive" | "controller-only";
   readonly modelId: string;
   readonly selectorModelId: string;
   readonly maxSteps: number;
@@ -353,6 +354,7 @@ export class AgentHarness {
         {
           prompt: original.prompt,
           executionMode: "full-control",
+          modelStrategy: this.options.modelStrategy ?? "adaptive",
           deadlineUtc: state.deadlineUtc,
           resumedAtStep: state.nextStep,
         },
@@ -438,6 +440,15 @@ export class AgentHarness {
       const routeAndSelect = async (
         failure?: Json,
       ): Promise<{ route: AgentCapabilityRoute; skill?: AgentSkill }> => {
+        if (this.options.modelStrategy === "controller-only") {
+          return {
+            route: {
+              modelVersion: "controller-only-comparison",
+              capabilities: { code: false, math: false, vision: false },
+              probabilities: { code: 0, math: 0, vision: 0 },
+            },
+          };
+        }
         const routingGoal = failure
           ? `ORIGINAL USER GOAL:\n${run.prompt}\nFAILED ATTEMPT:\n${JSON.stringify(failure)}`
           : run.prompt;
