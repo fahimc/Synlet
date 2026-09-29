@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "synlet.harness-eval/v1",
+  "name": "Published SOMA regression set v1 — not a private holdout",
+  "cases": [
+    {"id":"math-01","category":"math","turns":[{"prompt":"Calculate 137 multiplied by 29. Reply with only the integer result."}],"oracle":{"kind":"number","value":3973}},
+    {"id":"math-02","category":"math","turns":[{"prompt":"Calculate (73 minus 118) multiplied by 7. Reply with only the integer result."}],"oracle":{"kind":"number","value":-315}},
+    {"id":"math-03","category":"math","turns":[{"prompt":"An item costs 80 before a 12.5 percent discount. What is its discounted price? Reply with only the number, no currency sign."}],"oracle":{"kind":"number","value":70}},
+    {"id":"math-04","category":"math","turns":[{"prompt":"Solve 7x + 11 = 60. Reply with only the numeric value of x."}],"oracle":{"kind":"number","value":7}},
+    {"id":"json-01","category":"structured-output","turns":[{"prompt":"Sort [9,-2,9,0,4] ascending, retaining duplicates. Reply with a JSON array only."}],"oracle":{"kind":"exact_json","value":[-2,0,4,9,9]}},
+    {"id":"json-02","category":"structured-output","turns":[{"prompt":"Return JSON only with keys enabled and retries: enabled must be false, retries must be 0. Do not use strings for these values."}],"oracle":{"kind":"exact_json","value":{"enabled":false,"retries":0}}},
+    {"id":"correction-01","category":"source-fidelity","turns":[{"prompt":"The earlier draft set the limit to 41. A correction sets it to 42. The last trial failed, and no successful retry has occurred. Return JSON only: keys currentLimit (number) and lastTrialSucceeded (boolean)."}],"oracle":{"kind":"exact_json","value":{"currentLimit":42,"lastTrialSucceeded":false}}},
+    {"id":"code-reading-01","category":"code-reading","turns":[{"prompt":"For JavaScript, what is the result of [1,2,3,4].filter(x=>x%2===0).map(x=>x*x)? Reply with the resulting JSON array only."}],"oracle":{"kind":"exact_json","value":[4,16]}},
+    {"id":"memory-01","category":"multi-turn-memory","turns":[{"prompt":"For this conversation, the deployment alias is SILVER_KITE_83. Remember it; acknowledge briefly."},{"prompt":"What is the deployment alias I gave you? Reply with only the alias."}],"oracle":{"kind":"exact_text","value":"SILVER_KITE_83"}},
+    {"id":"memory-02","category":"multi-turn-correction","turns":[{"prompt":"For this conversation, the proposed port is 43127. Remember it."},{"prompt":"Correction: use port 43139 instead. The previous port is superseded."},{"prompt":"Which port is current? Reply with only the integer."}],"oracle":{"kind":"number","value":43139}}
+  ]
+}
