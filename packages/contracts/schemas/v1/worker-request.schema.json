@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synlet.local/schemas/v1/worker-request.schema.json",
+  "title": "WorkerRequest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "requestId",
+    "taskId",
+    "stepId",
+    "deadlineUtc",
+    "operation",
+    "inputs"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "synlet.worker/v1" },
+    "requestId": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "taskId": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "stepId": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "deadlineUtc": { "type": "string", "minLength": 20, "maxLength": 64 },
+    "operation": { "enum": ["route", "embed"] },
+    "inputs": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": { "type": "string", "maxLength": 8192 }
+    }
+  }
+}

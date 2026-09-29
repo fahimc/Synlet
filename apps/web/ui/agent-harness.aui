@@ -1,0 +1,63 @@
+Page AgentHarness data=$view
+  Row gap=none variant=shell
+    Section variant=sidebar
+      Row gap=sm variant=brand
+        Badge tone=dark "S"
+        Heading level=2 "Synlet"
+      Button variant=secondary action=newChat "New task"
+      Divider
+      Text tone=muted "Recent runs"
+      For each=$view.history
+        Button variant=ghost action=$item.action "$item.title"
+      Spacer
+      Divider
+      Text tone=muted "Local agent harness"
+      For each=$view.capabilities
+        Row gap=sm variant=capability
+          Badge tone=$item.tone "$item.label"
+          Text "$item.value"
+    Section variant=conversation
+      Row gap=sm variant=topbar
+        Heading level=2 "Synlet Codex"
+        Badge tone=success "$view.runtime"
+        Spacer
+        Text tone=muted "$view.model"
+      Divider
+      Stack gap=lg variant=messages
+        If condition=$view.empty
+          Section variant=welcome
+            Heading level=1 "What should we build?"
+            Text tone=muted "Use the local model, skills, MCP tools, web browser, files, and terminal from one inspectable flow."
+        For each=$view.messages
+          Card variant=$item.role
+            Badge tone=$item.tone "$item.label"
+            Text "$item.content"
+            If condition=$item.hasTrace
+              Section variant=trace
+                Row gap=sm variant=traceHeader
+                  Heading level=3 "Task flow"
+                  Badge tone=$item.traceTone "$item.traceStatus"
+                  Spacer
+                  Text tone=muted "$item.traceSummary"
+                For each=$item.trace
+                  Row gap=sm variant=traceNode
+                    Icon name=$item.icon
+                    Stack gap=none
+                      Text "$item.label"
+                      If condition=$item.hasModel
+                        Text tone=muted "$item.model"
+                      Text tone=muted "$item.detail"
+                    Spacer
+                    Badge tone=$item.tone "$item.status"
+        If condition=$view.running
+          Button variant=secondary action=cancel "Stop run"
+      Section variant=composer
+        Input placeholder="Message Synlet…" value=$view.draft
+        Row gap=sm
+          Badge tone=muted "Full computer"
+          Badge tone=muted "Web"
+          Badge tone=muted "MCP"
+          Badge tone=muted "Skills"
+          Spacer
+          Button variant=primary action=send "Send"
+        Text tone=muted "Commands run locally. Destructive effects remain visible in the task flow."

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synlet.local/schemas/v1/context-build-request.schema.json",
+  "title": "ContextBuildRequest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["query", "role", "exhaustive", "pinnedConstraints"],
+  "properties": {
+    "query": { "type": "string", "minLength": 1, "maxLength": 4096 },
+    "role": { "enum": ["controller", "code", "math", "vision", "compactor"] },
+    "exhaustive": { "type": "boolean" },
+    "pinnedConstraints": {
+      "type": "array",
+      "maxItems": 64,
+      "items": { "type": "string", "maxLength": 2048 }
+    }
+  }
+}

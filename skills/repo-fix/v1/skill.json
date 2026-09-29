@@ -1,0 +1,1 @@
+{"id":"repo-fix","version":"v1","title":"Repository fix","description":"Use only when the request requires inspecting, changing, or testing source code in a repository.","trusted":true,"maxSteps":8,"tools":["file.read","file.patch"],"completionChecks":["targeted tests pass","diff contains only approved workspace files"]}

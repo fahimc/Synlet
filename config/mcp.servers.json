@@ -1,0 +1,10 @@
+{
+  "servers": {
+    "synlet": {
+      "command": "node",
+      "args": ["scripts/synlet-mcp-server.mjs"],
+      "cwd": ".",
+      "enabled": true
+    }
+  }
+}

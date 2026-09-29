@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synlet.local/schemas/v1/source-create-request.schema.json",
+  "title": "SourceCreateRequest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["title", "kind", "content"],
+  "properties": {
+    "title": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "kind": { "enum": ["text", "conversation", "code"] },
+    "content": { "type": "string", "minLength": 1 }
+  }
+}

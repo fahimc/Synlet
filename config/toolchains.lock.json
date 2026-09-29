@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "synlet.toolchains/v1",
+  "tested": {
+    "node": {
+      "version": "24.21.0",
+      "channel": "Krypton LTS",
+      "platforms": ["windows-x64", "linux-x64"]
+    },
+    "pnpm": {
+      "version": "11.28.1"
+    },
+    "typescript": {
+      "version": "6.0.3"
+    },
+    "sqlite": {
+      "distribution": "node:sqlite bundled with Node 24.21.0",
+      "fts5Required": true
+    },
+    "python": { "version": "3.11.4", "implementation": "CPython" },
+    "uv": { "version": "0.12.15" },
+    "playwrightCore": { "version": "1.63.0" }
+  },
+  "compatibility": {
+    "developmentHostObserved": {
+      "node": "26.8.2",
+      "pnpm": "11.19.0",
+      "platform": "win32-x64",
+      "nodeSqliteVersionOnDependencyRuntime": "3.53.3"
+    },
+    "notes": [
+      "Node 24.21.0 is the locked build and CI baseline.",
+      "The development host exposed pnpm 11.19.0; the locked pnpm 11.28.1 CLI was used from an isolated tool cache because the older CLI registered a symlink-only global store incompatible with exFAT.",
+      "Node 26.8.2 was observed in the shell; the Codex dependency runtime used Node 24.19.0 during initial bootstrap.",
+      "Browser E2E used installed Microsoft Edge 154.0.4258.37 through a dedicated Playwright profile.",
+      "The host RTX 3060 12GB ran llama.cpp b11237 CUDA 12.4 with Qwen3-4B Q4_K_M; measured generation reached 93.63 tokens/s for the recorded full-server sample."
+    ]
+  },
+  "localInference": {
+    "llamaCpp": "b11237 (commit 14ebbd5f2)",
+    "backend": "CUDA 12.4",
+    "model": "Qwen/Qwen3-4B-GGUF@bc640142c66e1fdd12af0bd68f40445458f3869b",
+    "quantization": "Q4_K_M"
+  }
+}

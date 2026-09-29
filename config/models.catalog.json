@@ -1,0 +1,77 @@
+{
+  "schemaVersion": "synlet.models-catalog/v1",
+  "evidence": "VERIFIED",
+  "models": [
+    {
+      "modelId": "julia-1",
+      "upstream": "SupersonicLabs/Julia-1",
+      "revision": "a85b127321d580d65176c89ced8273f305745d85",
+      "artifact": "Julia-1/model.safetensors",
+      "role": "router",
+      "provider": "python",
+      "licence": "Apache-2.0",
+      "status": "verified"
+    },
+    {
+      "modelId": "minicpm5-2b-q4-k-m",
+      "upstream": "openbmb/MiniCPM5-2B-GGUF",
+      "revision": "2079a22f3beaa4e306449978533478fe0522f4b3",
+      "artifact": "MiniCPM5-2B-Q4_K_M.gguf",
+      "role": "controller",
+      "provider": "llama.cpp",
+      "licence": "Apache-2.0",
+      "status": "verified"
+    },
+    {
+      "modelId": "k2-horizon-4b-q4-k-m",
+      "upstream": "IFM/K2-Horizon-3.7B-GGUF",
+      "revision": "a81d5fec318b47b9c7144a839f538f6b9006291c",
+      "artifact": "K2-Horizon-4B-Q4_K_M.gguf",
+      "role": "code",
+      "provider": "llama.cpp",
+      "licence": "Apache-2.0",
+      "status": "disabled-runtime-incompatible"
+    },
+    {
+      "modelId": "nanbeige4.1-3b-q4-k-m",
+      "upstream": "mradermacher/Nanbeige4.1-3B-GGUF",
+      "revision": "c2c9e50a6bffb92c194c286e90cdf794b5657b13",
+      "artifact": "Nanbeige4.1-3B.Q4_K_M.gguf",
+      "role": "math",
+      "provider": "llama.cpp",
+      "licence": "Apache-2.0",
+      "status": "verified"
+    },
+    {
+      "modelId": "lfm2.5-vl-3b-q4-k-m",
+      "upstream": "LiquidAI/LFM2.5-VL-3B-GGUF",
+      "revision": "6f730e9a2c454e8af9adc29db58e638e01e5957f",
+      "artifact": "LFM2.5-VL-3B-Q4_K_M.gguf",
+      "projector": "mmproj-LFM2.5-VL-3B-Q8_0.gguf",
+      "role": "vision",
+      "provider": "llama.cpp",
+      "licence": "LFM-1.0",
+      "status": "verified-local-licence-review-required-for-redistribution"
+    },
+    {
+      "modelId": "qwen3.5-0.8b-q4-k-m",
+      "upstream": "lmstudio-community/Qwen3.5-0.8B-GGUF",
+      "revision": "26bab2c9369648924251c0ebb3dae012f5147707",
+      "artifact": "Qwen3.5-0.8B-Q4_K_M.gguf",
+      "role": "compactor",
+      "provider": "llama.cpp",
+      "licence": "Apache-2.0",
+      "status": "verified"
+    },
+    {
+      "modelId": "embeddinggemma-300m",
+      "upstream": "google/embeddinggemma-300m",
+      "revision": "57c266a740f537b4dc058e1b0cda161fd15afa75",
+      "artifact": "model.safetensors",
+      "role": "embedding",
+      "provider": "python",
+      "licence": "Gemma",
+      "status": "verified-authorized-local-use"
+    }
+  ]
+}

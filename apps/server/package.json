@@ -1,0 +1,17 @@
+{
+  "name": "@synlet/server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "dependencies": {
+    "@fastify/static": "10.1.5",
+    "ajv": "8.20.0",
+    "fastify": "5.12.5"
+  }
+}

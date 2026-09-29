@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synlet.local/schemas/v1/task-create-request.schema.json",
+  "title": "TaskCreateRequest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["sessionId", "prompt", "execution"],
+  "properties": {
+    "sessionId": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "prompt": { "type": "string", "minLength": 1, "maxLength": 32768 },
+    "execution": { "enum": ["immediate", "deferred"] }
+  }
+}

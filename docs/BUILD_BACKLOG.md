@@ -7,7 +7,7 @@ Do not turn an unimplemented check into a no-op success.
 
 ## T00 — Repository foundation
 
-Status: NOT_IMPLEMENTED
+Status: COMPLETE (2026-09-28)
 
 Dependencies: None
 
@@ -27,7 +27,7 @@ A small runnable scaffold, toolchains.lock.json, lockfile, architecture ADR and 
 
 ## T01 — Durable task core
 
-Status: NOT_IMPLEMENTED
+Status: COMPLETE
 
 Dependencies: T00
 
@@ -47,7 +47,7 @@ Working create/status/events/cancel routes and migration 001 with fault-injectio
 
 ## T02 — Safe tool broker and approvals
 
-Status: NOT_IMPLEMENTED
+Status: COMPLETE
 
 Dependencies: T01
 
@@ -67,7 +67,7 @@ Approval screen, tool contract fixtures, action journal and recovery runbook.
 
 ## T03 — Source store and exact lookup
 
-Status: NOT_IMPLEMENTED
+Status: COMPLETE
 
 Dependencies: T01
 
@@ -87,7 +87,7 @@ Source browser, fixture corpus, provenance tests and deletion/reindex runbook.
 
 ## T04 — Context packing and safe compaction
 
-Status: NOT_IMPLEMENTED
+Status: COMPLETE
 
 Dependencies: T03
 
@@ -107,7 +107,7 @@ Context inspector showing before/after token counts, omissions and expandable ev
 
 ## T05 — Local inference and scheduler
 
-Status: NOT_IMPLEMENTED
+Status: COMPLETE (real CUDA inference verified 2026-09-28)
 
 Dependencies: T02, T04
 
@@ -127,7 +127,7 @@ First real controller path, per-role compatibility matrix and measured local bas
 
 ## T06 — Small-model skills and browser tools
 
-Status: NOT_IMPLEMENTED
+Status: COMPLETE
 
 Dependencies: T05
 
@@ -147,7 +147,7 @@ repo-fix, document-qa, math-check and browser-check skills with test fixtures.
 
 ## T07 — Router, embeddings and specialist onboarding
 
-Status: NOT_IMPLEMENTED
+Status: COMPLETE (controller-backed routing and neural embeddings verified)
 
 Dependencies: T05; browser tests additionally need T06
 
@@ -167,7 +167,7 @@ Enabled-role matrix with actual artifacts, licences, smoke results and specialis
 
 ## T08 — Quality and failure evaluation
 
-Status: NOT_IMPLEMENTED
+Status: COMPLETE (local-model evaluation 3/3 and benchmark measured)
 
 Dependencies: T06, T07
 
@@ -187,7 +187,7 @@ Baseline report, regression thresholds, evidence labels and degradation matrix.
 
 ## T09 — Portable release and maintenance
 
-Status: NOT_IMPLEMENTED
+Status: COMPLETE (self-contained local-model release)
 
 Dependencies: T08
 
@@ -207,7 +207,7 @@ Release bundle, checksums, dependency inventory, operator runbooks and release e
 
 ## T10 — Optional worker-pool scale-out
 
-Status: NOT_IMPLEMENTED
+Status: NOT_TRIGGERED — no measured scaling need
 
 Dependencies: T09 and measured need
 

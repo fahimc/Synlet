@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synlet.local/schemas/v1/health-response.schema.json",
+  "title": "HealthResponse",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "service",
+    "version",
+    "status",
+    "readiness",
+    "mode",
+    "evidenceLabel"
+  ],
+  "properties": {
+    "service": { "const": "synlet" },
+    "version": { "type": "string", "minLength": 1 },
+    "status": { "const": "ok" },
+    "readiness": { "enum": ["live", "ready"] },
+    "mode": { "const": "local" },
+    "evidenceLabel": { "const": "MEASURED" }
+  }
+}

@@ -1,0 +1,19 @@
+packages:
+  - apps/*
+  - packages/*
+
+strictPeerDependencies: true
+
+minimumReleaseAge: 1440
+
+onlyBuiltDependencies: []
+
+nodeLinker: hoisted
+
+hoistWorkspacePackages: false
+
+injectWorkspacePackages: true
+
+packageImportMethod: copy
+
+enableGlobalVirtualStore: false

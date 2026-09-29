@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>Owned fixture</title>
+  </head>
+  <body>
+    <h1>Browser evidence</h1>
+    <button id="reveal">Reveal</button>
+    <p id="result">Waiting</p>
+    <label>Agent input <input id="agent-input" /></label>
+    <script>
+      document.querySelector("#reveal").addEventListener("click", () => {
+        document.querySelector("#result").textContent = "Observed after action";
+      });
+    </script>
+  </body>
+</html>

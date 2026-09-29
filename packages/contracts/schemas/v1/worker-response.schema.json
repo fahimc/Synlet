@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synlet.local/schemas/v1/worker-response.schema.json",
+  "title": "WorkerResponse",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "requestId",
+    "status",
+    "modelVersion",
+    "outputs"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "synlet.worker/v1" },
+    "requestId": { "type": "string" },
+    "status": { "enum": ["ok", "error", "cancelled"] },
+    "modelVersion": { "type": "string" },
+    "outputs": {
+      "type": "array",
+      "maxItems": 64,
+      "items": { "type": "string" }
+    }
+  }
+}

@@ -1,0 +1,1 @@
+{"id":"math-check","version":"v1","title":"Math check","description":"Use when the request is primarily a numerical calculation or mathematical verification that can be checked with a calculator.","trusted":true,"maxSteps":5,"tools":["calculator"],"completionChecks":["calculation receipt exists","units and assumptions are stated"]}

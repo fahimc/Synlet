@@ -1,0 +1,7 @@
+archive/
+docs/architecture/
+node_modules/
+**/dist/
+packages/contracts/src/generated/
+apps/web/src/generated/
+pnpm-lock.yaml

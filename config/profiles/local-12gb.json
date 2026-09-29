@@ -1,0 +1,35 @@
+{
+  "schemaVersion": "synlet.profile/v1",
+  "mode": "local",
+  "server": { "host": "127.0.0.1", "port": 43127 },
+  "inference": {
+    "baseUrl": "http://127.0.0.1:43128",
+    "apiKey": "synlet-internal-local"
+  },
+  "ui": { "evidenceLabel": "MEASURED" },
+  "paths": {
+    "dataRoot": "runtime-data",
+    "workspaceRoot": "runtime-data/workspace",
+    "modelRoot": "model-weights",
+    "modelsLock": "config/models.lock.json",
+    "runtimeLock": "config/runtime.lock.json",
+    "llamaExecutable": "runtime/llama/llama-server.exe",
+    "pythonExecutable": "services/python-worker/.venv/Scripts/python.exe",
+    "browserExecutable": "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"
+  },
+  "limits": {
+    "maxPendingTasks": 16,
+    "maxSourceBytes": 1048576,
+    "maxToolReadBytes": 65536
+  },
+  "context": {
+    "maxLookupRounds": 3,
+    "defaultInputTokens": 16384,
+    "generationReserveTokens": 4096,
+    "safetyTokens": 1024
+  },
+  "scheduler": {
+    "gpuMemoryMiB": 12288,
+    "maxPendingInferenceJobs": 16
+  }
+}

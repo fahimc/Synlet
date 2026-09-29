@@ -1,0 +1,1 @@
+{"id":"document-qa","version":"v1","title":"Document question answering","description":"Use when the user asks questions about supplied local documents or files and the answer must be grounded in their contents.","trusted":true,"maxSteps":6,"tools":["file.read"],"completionChecks":["answer cites source revisions","omissions are visible"]}

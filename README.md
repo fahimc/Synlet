@@ -4,7 +4,83 @@
 
 Synlet is a proposed local AI assistant powered by **SOMA — Specialist Orchestration and Memory Architecture**. SOMA coordinates small specialist models through adaptive routing, source-preserving indexed memory and verified tool execution behind one conversational interface.
 
-> **Status: architecture and Codex build handoff, v0.2. Not an implemented assistant.** Model choices are candidates; speed figures are estimates and quality figures are acceptance targets, not measured results.
+> **Status: working local multi-model system.** Synlet runs the architecture-selected
+> Julia-1 router on CPU; MiniCPM5 controller, Nanbeige math specialist, LFM vision
+> specialist and Qwen3.5 compactor through a pinned llama.cpp CUDA router; and
+> EmbeddingGemma on CPU. Model and runtime files are SHA-256 locked, inference and
+> retrieval are measured, and no cloud model or OpenAI account is required.
+
+## Current runnable system
+
+The default UI is a working Codex-style agent harness backed by the installed local
+model roster. Julia-1 classifies finite capabilities, Qwen3.5-0.8B selects a
+versioned skill without reasoning, and the reasoning-enabled MiniCPM5 controller can
+consult enabled specialists, call configured
+MCP servers, search the live web, drive a dedicated Edge profile, read and patch
+workspace files, and run non-interactive host commands. Every route is persisted in
+SQLite and appears in the chat as a live task-flow diagram while the run is active.
+
+The lower-level authenticated task, approval, source, retrieval and context APIs remain
+available. There is no production mock or cloud-model fallback.
+
+```text
+pnpm install --frozen-lockfile
+pnpm check
+pnpm test:contracts
+pnpm test:integration
+pnpm test:security
+pnpm test:e2e
+pnpm eval:local
+pnpm smoke:models
+pnpm test:live-agent
+pnpm test:release
+pnpm dev
+```
+
+Open <http://127.0.0.1:43127/> after startup. The launcher verifies every enabled
+runtime/model hash, starts the authenticated loopback-only multi-model llama.cpp router, waits
+for model readiness, and then starts the Synlet gateway. Local state is stored under
+`runtime-data/`. Stop with Ctrl+C. The optional T10 worker pool remains untriggered
+until measurements justify it.
+
+### Harness capabilities
+
+- `command.run` executes PowerShell on Windows (or `/bin/sh` elsewhere), with an
+  explicit working directory, bounded timeout and captured output. It is the full-host
+  escape hatch requested for computer administration; use it with the same care as a
+  local terminal.
+- `browser.search`, `browser.inspect`, `browser.click` and `browser.type` provide
+  generic live web search, navigation and form interaction.
+  Browser activity uses a separate profile under `runtime-data/`.
+- There are no task-specific time, CPU, news or similar semantic routes. The model
+  decides how to use the generic shell and browser primitives from the user request
+  and the observations it receives.
+- MCP servers are configured in `config/mcp.servers.json`. The bundled stdio server
+  provides `echo` and `runtime_info`, proving discovery and tool calls end to end.
+- Runtime skills live under `skills/<name>/<version>/` and contribute bounded
+  instructions, allowed tools and completion checks to the controller.
+- The agent pipeline is Julia classification, Qwen3.5-0.8B skill selection, then the
+  MiniCPM controller loop. Reasoning is disabled for Julia, the Qwen selection and
+  Qwen compaction; it is enabled for MiniCPM and configured per specialist. Generation
+  has a task deadline but no arbitrary response-token ceiling.
+- Every model trace node displays its exact model ID/version. Failed tools or rejected
+  answers create a root-level recovery route that sends the original goal plus failure
+  context back through Julia and Qwen before planning resumes. Julia capability labels
+  constrain which specialists MiniCPM may call; the disabled K2 role uses MiniCPM as
+  the bounded code-specialist fallback instead of exposing an unrelated specialist.
+- Agent runs are asynchronous and durable. `POST /api/v1/agent-runs` starts a run;
+  `GET /api/v1/agent-runs` lists access-scoped session history, and the run plus its
+  append-only graph are available from `/api/v1/agent-runs/:id` and
+  `/api/v1/agent-runs/:id/events`. The UI restores the latest conversation after a
+  reload and opens prior sessions from the sidebar.
+
+The interface source of truth is `apps/web/ui/agent-harness.aui`; the build compiles it
+deterministically to React with `@codedia/parser`.
+
+With the local stack running, `pnpm test:live-agent` sends unassisted natural-language
+questions about current time, CPU utilization and current UK headlines. It verifies
+that the model discovers a generic shell/browser approach and grounds each answer in
+real observations; the prompts do not name tools, commands or expected answers.
 
 ## Start here
 
@@ -27,7 +103,8 @@ Clone the repository and open the architecture HTML in a browser. It is self-con
 
 Open this repository and supply the contents of `CODEX_START_PROMPT.txt`. Start with T00 when no implementation exists, implement one complete task at a time, and record actual verification results. The development commands become available only after their corresponding tasks have been implemented.
 
-Use mock inference first. Do not download weights, call paid/cloud services, publish changes or install services without explicit permission.
+The installed runtime is local-only. Do not introduce cloud fallback, telemetry,
+additional weights, publishing, or services without explicit permission.
 
 ## Design principles
 
@@ -48,6 +125,14 @@ Active documents use Synlet/SOMA. The archived originals retain the previous wor
 
 First target: Windows 11, RTX 3060 12GB, 32GB RAM. No Docker or WSL requirement. Paths and ports remain configurable.
 
-This repository contains planning documents and build guidance, not model weights, a finished runtime, measured hardware benchmarks, secrets or an adopted software licence. Third-party model licences must be reviewed independently.
+The local checkout has a pinned llama.cpp CUDA runtime, CPU Python runtime and the
+locked model roster under ignored artifact directories. Generated portable bundles
+include the enabled artifacts and installed dependencies. Source control contains
+their immutable provenance and hashes, not the multi-gigabyte binaries themselves.
+
+K2-Horizon is downloaded but disabled: pinned upstream llama.cpp rejects its
+`k2-horizon` architecture, while the publisher fork is not yet an acceptable stable
+CUDA runtime. MiniCPM remains the architecture-defined code fallback until a compatible
+runtime passes the same role tests.
 
 `HANDOFF_FILES.sha256` records checksums for the imported documentation and original artifacts. Future edits legitimately change those hashes; update the manifest when publishing a new handoff.

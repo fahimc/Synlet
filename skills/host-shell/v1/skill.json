@@ -1,0 +1,14 @@
+{
+  "id": "host-shell",
+  "version": "v1",
+  "title": "Host shell investigation and operation",
+  "description": "Use when the request requires inspecting or operating the local computer, operating system, hardware, processes, services, network, or native command-line programs. Do not use for public web research or source-code editing alone.",
+  "trusted": true,
+  "maxSteps": 12,
+  "tools": ["command.run"],
+  "completionChecks": [
+    "host operating system and shell are observed before task-specific commands",
+    "commands use installed syntax for the observed host",
+    "the final answer is grounded in successful command output"
+  ]
+}

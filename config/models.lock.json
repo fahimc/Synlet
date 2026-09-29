@@ -1,0 +1,153 @@
+{
+  "schemaVersion": "synlet.models-lock/v1",
+  "models": [
+    {
+      "modelId": "julia-1",
+      "role": "router",
+      "enabled": true,
+      "provider": "python",
+      "artifactPath": "model-weights/Julia-1/model.safetensors",
+      "sha256": "df853bf7fe424420011f3d0c47a05d7341aa9eefa7fb9f203ea4aada4ad95b72",
+      "template": "julia-native",
+      "reasoning": "disabled",
+      "memoryMiB": 768,
+      "capabilities": {
+        "text": false,
+        "image": false,
+        "tools": false,
+        "structuredOutput": true,
+        "maxContextTokens": 1024
+      }
+    },
+    {
+      "modelId": "minicpm5-2b-q4-k-m",
+      "role": "controller",
+      "enabled": true,
+      "provider": "llama.cpp",
+      "artifactPath": "model-weights/MiniCPM5-2B-Q4_K_M.gguf",
+      "sha256": "ec2d5801640099e97d8d7e8003ad4d81f336e757811f03a26173dddf386602fd",
+      "template": "minicpm",
+      "reasoning": "enabled",
+      "memoryMiB": 2048,
+      "capabilities": {
+        "text": true,
+        "image": false,
+        "tools": true,
+        "structuredOutput": true,
+        "maxContextTokens": 16384
+      }
+    },
+    {
+      "modelId": "k2-horizon-4b-q4-k-m",
+      "role": "code",
+      "enabled": false,
+      "provider": "llama.cpp",
+      "artifactPath": "model-weights/K2-Horizon-4B-Q4_K_M.gguf",
+      "sha256": "07773aed93890d4f5d08b421430000d5c8d73cefc74fbdc32e67d820f23207b2",
+      "template": "native-gguf",
+      "reasoning": "enabled",
+      "memoryMiB": 4096,
+      "capabilities": {
+        "text": true,
+        "image": false,
+        "tools": false,
+        "structuredOutput": false,
+        "maxContextTokens": 16384
+      },
+      "reason": "The pinned upstream llama.cpp b11237 rejects the k2-horizon architecture. The publisher fork is pre-release and has a reported CUDA correctness issue, so MiniCPM remains the architecture-defined code fallback until a compatible runtime passes role tests."
+    },
+    {
+      "modelId": "nanbeige4.1-3b-q4-k-m",
+      "role": "math",
+      "enabled": true,
+      "provider": "llama.cpp",
+      "artifactPath": "model-weights/Nanbeige4.1-3B.Q4_K_M.gguf",
+      "sha256": "0ba28f064c66071646e7959c752851abf02a096f1d37e7d0e443e3502e12ca02",
+      "template": "native-gguf",
+      "reasoning": "enabled",
+      "memoryMiB": 3584,
+      "capabilities": {
+        "text": true,
+        "image": false,
+        "tools": false,
+        "structuredOutput": false,
+        "maxContextTokens": 16384
+      }
+    },
+    {
+      "modelId": "lfm2.5-vl-3b-q4-k-m",
+      "role": "vision",
+      "enabled": true,
+      "provider": "llama.cpp",
+      "artifactPath": "model-weights/LFM2.5-VL-3B-Q4_K_M.gguf",
+      "sha256": "2436cf4bbac9a16e5dfc7799a140e583c2bc15958f4b24a391f8a8b10ecb8884",
+      "projectorPath": "model-weights/mmproj-LFM2.5-VL-3B-Q8_0.gguf",
+      "projectorSha256": "ecbbe7097f696dba67172738d79c9f01132cdb6c0b457606315e268df3d67e64",
+      "template": "native-gguf",
+      "reasoning": "disabled",
+      "memoryMiB": 4096,
+      "capabilities": {
+        "text": true,
+        "image": true,
+        "tools": false,
+        "structuredOutput": false,
+        "maxContextTokens": 8192
+      }
+    },
+    {
+      "modelId": "qwen3.5-0.8b-q4-k-m",
+      "role": "compactor",
+      "enabled": true,
+      "provider": "llama.cpp",
+      "artifactPath": "model-weights/Qwen3.5-0.8B-Q4_K_M.gguf",
+      "sha256": "f5b14da98939b60bbe1019a964eba656407e1e0b64f1fe3003ff6d650e93bfec",
+      "template": "native-gguf",
+      "reasoning": "disabled",
+      "memoryMiB": 1024,
+      "capabilities": {
+        "text": true,
+        "image": false,
+        "tools": false,
+        "structuredOutput": true,
+        "maxContextTokens": 8192
+      }
+    },
+    {
+      "modelId": "embeddinggemma-300m",
+      "role": "embedding",
+      "enabled": true,
+      "provider": "python",
+      "artifactPath": "model-weights/EmbeddingGemma-300m/model.safetensors",
+      "sha256": "cbf5a78393b6a033e0b8a63a57549964f7ed5c6fbeb4ba0694214f36123f2fd2",
+      "template": "sentence-transformers",
+      "reasoning": "disabled",
+      "memoryMiB": 1536,
+      "capabilities": {
+        "text": false,
+        "image": false,
+        "tools": false,
+        "structuredOutput": true,
+        "maxContextTokens": 2048
+      }
+    },
+    {
+      "modelId": "qwen3-4b-q4-k-m",
+      "role": "controller",
+      "enabled": false,
+      "provider": "llama.cpp",
+      "artifactPath": "model-weights/Qwen3-4B-Q4_K_M.gguf",
+      "sha256": "7485fe6f11af29433bc51cab58009521f205840f5b4ae3a32fa7f92e8534fdf5",
+      "template": "qwen3",
+      "reasoning": "enabled",
+      "memoryMiB": 4096,
+      "capabilities": {
+        "text": true,
+        "image": false,
+        "tools": false,
+        "structuredOutput": true,
+        "maxContextTokens": 32768
+      },
+      "reason": "Retained as a measured fallback artifact; the architecture-selected MiniCPM5 controller is active."
+    }
+  ]
+}

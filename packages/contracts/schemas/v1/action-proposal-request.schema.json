@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synlet.local/schemas/v1/action-proposal-request.schema.json",
+  "title": "ActionProposalRequest",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["toolId", "arguments"],
+      "properties": {
+        "toolId": { "const": "file.read" },
+        "arguments": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path"],
+          "properties": {
+            "path": { "type": "string", "minLength": 1, "maxLength": 4096 }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["toolId", "arguments"],
+      "properties": {
+        "toolId": { "const": "file.patch" },
+        "arguments": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path", "content", "expectedSha256"],
+          "properties": {
+            "path": { "type": "string", "minLength": 1, "maxLength": 4096 },
+            "content": { "type": "string" },
+            "expectedSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["toolId", "arguments"],
+      "properties": {
+        "toolId": { "const": "calculator" },
+        "arguments": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["expression"],
+          "properties": {
+            "expression": { "type": "string", "minLength": 1, "maxLength": 256 }
+          }
+        }
+      }
+    }
+  ]
+}

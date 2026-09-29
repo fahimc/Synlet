@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synlet.local/schemas/v1/runtime-profile.schema.json",
+  "title": "RuntimeProfile",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "mode",
+    "server",
+    "ui",
+    "inference",
+    "paths",
+    "limits",
+    "context",
+    "scheduler"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "synlet.profile/v1" },
+    "mode": { "const": "local" },
+    "server": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["host", "port"],
+      "properties": {
+        "host": { "const": "127.0.0.1" },
+        "port": { "type": "integer", "minimum": 1024, "maximum": 65535 }
+      }
+    },
+    "ui": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evidenceLabel"],
+      "properties": {
+        "evidenceLabel": { "const": "MEASURED" }
+      }
+    },
+    "inference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["baseUrl", "apiKey"],
+      "properties": {
+        "baseUrl": {
+          "type": "string",
+          "pattern": "^http://127\\.0\\.0\\.1:[0-9]{4,5}$"
+        },
+        "apiKey": { "type": "string", "minLength": 16, "maxLength": 256 }
+      }
+    },
+    "paths": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dataRoot",
+        "workspaceRoot",
+        "modelRoot",
+        "modelsLock",
+        "runtimeLock",
+        "llamaExecutable",
+        "pythonExecutable",
+        "browserExecutable"
+      ],
+      "properties": {
+        "dataRoot": { "type": "string", "minLength": 1 },
+        "workspaceRoot": { "type": "string", "minLength": 1 },
+        "modelRoot": { "type": "string", "minLength": 1 },
+        "modelsLock": { "type": "string", "minLength": 1 },
+        "runtimeLock": { "type": "string", "minLength": 1 },
+        "llamaExecutable": { "type": "string", "minLength": 1 },
+        "pythonExecutable": { "type": "string", "minLength": 1 },
+        "browserExecutable": { "type": "string", "minLength": 1 }
+      }
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["maxPendingTasks", "maxSourceBytes", "maxToolReadBytes"],
+      "properties": {
+        "maxPendingTasks": { "type": "integer", "minimum": 1, "maximum": 1000 },
+        "maxSourceBytes": {
+          "type": "integer",
+          "minimum": 1024,
+          "maximum": 16777216
+        },
+        "maxToolReadBytes": {
+          "type": "integer",
+          "minimum": 256,
+          "maximum": 1048576
+        }
+      }
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "maxLookupRounds",
+        "defaultInputTokens",
+        "generationReserveTokens",
+        "safetyTokens"
+      ],
+      "properties": {
+        "maxLookupRounds": { "type": "integer", "minimum": 1, "maximum": 8 },
+        "defaultInputTokens": {
+          "type": "integer",
+          "minimum": 128,
+          "maximum": 131072
+        },
+        "generationReserveTokens": {
+          "type": "integer",
+          "minimum": 32,
+          "maximum": 32768
+        },
+        "safetyTokens": { "type": "integer", "minimum": 32, "maximum": 32768 }
+      }
+    },
+    "scheduler": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["gpuMemoryMiB", "maxPendingInferenceJobs"],
+      "properties": {
+        "gpuMemoryMiB": {
+          "type": "integer",
+          "minimum": 1024,
+          "maximum": 1048576
+        },
+        "maxPendingInferenceJobs": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        }
+      }
+    }
+  }
+}

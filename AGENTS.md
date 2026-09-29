@@ -39,7 +39,8 @@ than overwriting its AGENTS.md.
   the appropriate explicit permission. Offline operation must not phone home.
 
 ## Build workflow
-Implement one task card at a time. Start with mock adapters and deterministic tests.
+Implement one task card at a time. Use deterministic test doubles only in isolated
+tests; production startup must use the verified local runtime and model.
 Before changing a public contract, add fixtures, a compatibility note and an ADR.
 Run the smallest relevant test while editing, then the task's complete check set.
 Create missing scripts before documenting them as usable. A placeholder is not done.
@@ -52,7 +53,7 @@ pnpm check
 pnpm test:contracts
 pnpm test:integration
 pnpm test:e2e
-pnpm dev:mock
+pnpm dev
 # From services/python-worker after T07:
 # uv sync --locked
 # uv run --locked pytest

@@ -1,0 +1,10 @@
+tunnel: c1071a25-dd95-4da8-b799-21f32bd5da8c
+credentials-file: C:\Users\fahim\.cloudflared\c1071a25-dd95-4da8-b799-21f32bd5da8c.json
+
+ingress:
+  - hostname: synlet.m8e.co.uk
+    service: http://127.0.0.1:43129
+    originRequest:
+      connectTimeout: 10s
+      tcpKeepAlive: 30s
+  - service: http_status:404

@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synlet.local/schemas/v1/task-response.schema.json",
+  "title": "TaskResponse",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "taskId",
+    "sessionId",
+    "status",
+    "revision",
+    "prompt",
+    "createdAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "taskId": { "type": "string" },
+    "sessionId": { "type": "string" },
+    "status": {
+      "enum": [
+        "queued",
+        "running",
+        "completed",
+        "cancel_requested",
+        "cancelled",
+        "blocked",
+        "failed"
+      ]
+    },
+    "revision": { "type": "integer", "minimum": 0 },
+    "prompt": { "type": "string" },
+    "result": { "type": "string" },
+    "createdAt": { "type": "string" },
+    "updatedAt": { "type": "string" }
+  }
+}

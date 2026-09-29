@@ -13,7 +13,8 @@ synlet/
       bootstrap/                   # The ONLY place that selects adapters
       http/                        # Validation, authentication, responses
       cli/                         # doctor / start / stop / backup / benchmark
-    web/src/                       # Task UI, sources, approvals, settings
+    web/ui/*.aui                   # Source-of-truth semantic UI screens
+    web/src/                       # React host adapter and generated agent chat UI
   packages/
     contracts/                     # Canonical JSON schemas + generated types
       schemas/v1/
@@ -30,6 +31,7 @@ synlet/
       storage/                     # SQLite, file artifacts, migrations
       retrieval/                   # FTS5 + bounded vector search
       tools/                       # Files, calculator, browser, controlled shell
+      mcp/                         # MCP stdio client connections and discovery
       observability/               # Redacted logging, tracing, measurements
     testkit/                       # Fake models, fake clock, fixtures, fault injection
   services/python-worker/
@@ -40,7 +42,8 @@ synlet/
   skills/                          # Synlet runtime skills (NOT Codex skills)
     repo-fix/v1/{skill.json,SKILL.md,fixtures/}
   config/
-    profiles/{mock,local-12gb,worker-pool}.json
+    profiles/local-12gb.json
+    runtime.lock.json              # Verified llama.cpp build, archives and files
     models.catalog.json            # Candidate identities and role preferences
     models.lock.json               # Verified revisions, files, hashes, licences
     toolchains.lock.json            # Tested Node / Python / runtimes / ABI

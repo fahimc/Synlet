@@ -1,0 +1,19 @@
+{
+  "id": "browser-check",
+  "version": "v1",
+  "title": "Browser check",
+  "description": "Use when the request requires fresh public internet information, web search, inspecting a web page, or interacting with a browser. Do not use for local machine state or source-code editing alone.",
+  "trusted": true,
+  "maxSteps": 8,
+  "tools": [
+    "browser.search",
+    "browser.inspect",
+    "browser.click",
+    "browser.type"
+  ],
+  "completionChecks": [
+    "requested current content is present in a successful browser observation",
+    "final page is observed after action",
+    "domain remains in policy"
+  ]
+}

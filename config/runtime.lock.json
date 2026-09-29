@@ -1,0 +1,46 @@
+{
+  "schemaVersion": "synlet.runtime-lock/v1",
+  "runtime": {
+    "name": "llama.cpp",
+    "tag": "b11237",
+    "commit": "14ebbd5f2",
+    "version": "0.5.0-dev",
+    "platform": "windows-x64-cuda-12.4",
+    "archives": [
+      {
+        "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11237/llama-b11237-bin-win-cuda-12.4-x64.zip",
+        "sha256": "67231e6fc4e22521c993a3237123dd08a3942edd854be7d53f576ebb70950608"
+      },
+      {
+        "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11237/cudart-llama-bin-win-cuda-12.4-x64.zip",
+        "sha256": "8c79a9b226de4b3cacfd1f83d24f962d0773be79f1e7b75c6af4ded7e32ae1d6"
+      }
+    ],
+    "files": [
+      {
+        "path": "runtime/llama/llama-server.exe",
+        "sha256": "463976b497c24acdad55e57cc26d8547f30c4f412942de2c7bd1df593933cf42"
+      },
+      {
+        "path": "runtime/llama/llama-server-impl.dll",
+        "sha256": "48caa577eae1c9bf7584e65578d3ac3b43d49cff0b121f34afb91625ef3ef1d6"
+      },
+      {
+        "path": "runtime/llama/llama-cli.exe",
+        "sha256": "7f583be4af4432c49ecfd5386eb1117c44af1b7f86e9db7389ee45a17d9ed8f9"
+      },
+      {
+        "path": "runtime/llama/llama-cli-impl.dll",
+        "sha256": "0f3e0478b1ef29e3831d3ef34879c9e6a05029e30fe222b90833860350bb3b7d"
+      },
+      {
+        "path": "runtime/llama/ggml-cuda.dll",
+        "sha256": "b3a75c38d9835153b62613b826c81491fc22f81c4434814b2253c39b7056f670"
+      },
+      {
+        "path": "runtime/llama/llama.dll",
+        "sha256": "1680fe4d11aebec774c7554474cc9a8cdcaa8ad2fb80908ef6a8d2ec498e2cba"
+      }
+    ]
+  }
+}
