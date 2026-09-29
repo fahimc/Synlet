@@ -72,7 +72,9 @@ test("idempotent intake, replayable events, cancellation, and ownership", async 
     url: `/api/v1/tasks/${first.json().taskId}`,
     headers: authHeaders("project-b"),
   });
-  assert.equal(hidden.statusCode, 404);
+  // A forged project header is rejected before resource lookup.
+  assert.equal(hidden.statusCode, 403);
+  assert.doesNotMatch(hidden.body, /Remember 42/u);
 
   const events = await app.inject({
     method: "GET",

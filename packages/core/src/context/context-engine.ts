@@ -59,8 +59,7 @@ export function validateExtractiveSummary(
     const chunk = allowed.get(ref.chunkId);
     if (
       !ref.chunkId ||
-      !chunk ||
-      chunk.ref.sourceId !== ref.sourceId ||
+      chunk?.ref.sourceId !== ref.sourceId ||
       chunk.ref.revision !== ref.revision
     )
       return false;

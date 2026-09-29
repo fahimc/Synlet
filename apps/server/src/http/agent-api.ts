@@ -148,8 +148,7 @@ export function installAgentApi(
     }
     const latest = messages.at(-1);
     if (
-      !latest ||
-      latest.role !== "user" ||
+      latest?.role !== "user" ||
       (!latest.content.trim() && !images.length) ||
       images.length > 2 ||
       Buffer.byteLength(messages.map((m) => m.content).join("")) > 1024 * 1024
@@ -173,7 +172,10 @@ export function installAgentApi(
         body.sessionId === undefined ? `api-${key}`.slice(0, 128) : sessionId,
       prompt: latest.content || "Interpret the attached image.",
       messages: messages.slice(0, -1),
-      images,
+      images: images.map((image, index) => ({
+        ...image,
+        id: `input-image-${index}`,
+      })),
       idempotencyKey: key,
     };
     let run = await services.agent.start(input, access);
