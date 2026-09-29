@@ -32,7 +32,6 @@ async function wait(app, id) {
 
 test("two-turn agent and model facade share memory and authenticated execution", async (t) => {
   const root = await mkdtemp(join(tmpdir(), "synlet-memory-"));
-  t.after(() => rm(root, { recursive: true, force: true }));
   const requests = [];
   const base = testServices();
   const original = base.model;
@@ -53,7 +52,10 @@ test("two-turn agent and model facade share memory and authenticated execution",
       dataRoot: join(root, "data"),
     }),
   });
-  t.after(() => app.close());
+  t.after(async () => {
+    await app.close();
+    await rm(root, { recursive: true, force: true });
+  });
   const start = await app.inject({
     method: "POST",
     url: "/api/v1/agent-runs",
@@ -118,7 +120,6 @@ test("two-turn agent and model facade share memory and authenticated execution",
 
 test("durable checkpoint stores action intent and preserves unknown outcomes across reopen", async (t) => {
   const root = await mkdtemp(join(tmpdir(), "synlet-recovery-"));
-  t.after(() => rm(root, { recursive: true, force: true }));
   const path = join(root, "state.sqlite");
   const access = {
     projectId: "p",
@@ -154,7 +155,10 @@ test("durable checkpoint stores action intent and preserves unknown outcomes acr
   db.close();
   db = new SynletDatabase(path);
   checkpoints = new SqliteAgentCheckpoints(db);
-  t.after(() => db.close());
+  t.after(async () => {
+    db.close();
+    await rm(root, { recursive: true, force: true });
+  });
   const recovered = await checkpoints.recover();
   assert.equal(recovered.length, 1);
   assert.equal(recovered[0].checkpoint.pendingAction.id, "action1");
