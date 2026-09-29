@@ -122,7 +122,8 @@ export class TaskService {
       )) {
         if (event.type === "text_delta") output.push(event.text);
         if (event.type === "done") {
-          if (event.finish !== "stop") throw new DomainError("INVALID_OUTPUT", "Incomplete generation");
+          if (event.finish !== "stop")
+            throw new DomainError("INVALID_OUTPUT", "Incomplete generation");
           completed = true;
           inputTokens = event.inputTokens;
           outputTokens = event.outputTokens;
@@ -131,7 +132,8 @@ export class TaskService {
           throw new DomainError("INVALID_OUTPUT", event.message);
         }
       }
-      if (controller.signal.aborted) throw new DomainError("CANCELLED", "Task cancelled");
+      if (controller.signal.aborted)
+        throw new DomainError("CANCELLED", "Task cancelled");
       const text = output.join("").trim();
       if (!completed || !text)
         throw new DomainError("INVALID_OUTPUT", "The model returned no text");

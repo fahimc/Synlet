@@ -35,7 +35,10 @@ function accessFor(
 ): AccessContext | undefined {
   const supplied = Buffer.from(request.headers.authorization ?? "");
   const expected = Buffer.from(`Bearer ${authToken}`);
-  if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) {
+  if (
+    supplied.length !== expected.length ||
+    !timingSafeEqual(supplied, expected)
+  ) {
     void reply
       .code(401)
       .send({ code: "UNAUTHENTICATED", message: "Bearer token required" });
@@ -43,13 +46,39 @@ function accessFor(
   }
   const requestedActor = request.headers["x-synlet-actor-id"];
   const requestedProject = request.headers["x-synlet-project-id"];
-  if ((requestedActor !== undefined && requestedActor !== principal.actorId) || (requestedProject !== undefined && (typeof requestedProject !== "string" || !principal.projectIds.includes(requestedProject)))) {
-    void reply.code(403).send({ code: "POLICY_DENIED", message: "Caller headers cannot change the authenticated operator scope" });
+  if (
+    (requestedActor !== undefined && requestedActor !== principal.actorId) ||
+    (requestedProject !== undefined &&
+      (typeof requestedProject !== "string" ||
+        !principal.projectIds.includes(requestedProject)))
+  ) {
+    void reply
+      .code(403)
+      .send({
+        code: "POLICY_DENIED",
+        message:
+          "Caller headers cannot change the authenticated operator scope",
+      });
     return undefined;
   }
-  const projectId = typeof requestedProject === "string" ? requestedProject : principal.projectIds[0];
-  if (!projectId) { void reply.code(403).send({code:"POLICY_DENIED",message:"Operator has no configured project"});return undefined; }
-  return { actorId: principal.actorId, projectId, policyVersion: "full-control/v1" };
+  const projectId =
+    typeof requestedProject === "string"
+      ? requestedProject
+      : principal.projectIds[0];
+  if (!projectId) {
+    void reply
+      .code(403)
+      .send({
+        code: "POLICY_DENIED",
+        message: "Operator has no configured project",
+      });
+    return undefined;
+  }
+  return {
+    actorId: principal.actorId,
+    projectId,
+    policyVersion: "full-control/v1",
+  };
 }
 
 function statusFor(error: DomainError): number {
@@ -95,7 +124,9 @@ export function installApi(
   authToken: string,
   principal: OperatorPrincipal,
 ): void {
-  installAgentApi(app, services, (request, reply) => accessFor(request, reply, authToken, principal));
+  installAgentApi(app, services, (request, reply) =>
+    accessFor(request, reply, authToken, principal),
+  );
   app.get("/api/v1/agent-runs", async (request, reply) => {
     const access = accessFor(request, reply, authToken, principal);
     if (!access) return;

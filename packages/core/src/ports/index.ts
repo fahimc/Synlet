@@ -318,7 +318,12 @@ export interface ArtifactPort {
 }
 
 export interface TokenizerPort {
-  countMessages?(messages: readonly { readonly role: "system" | "user"; readonly content: string }[]): number | Promise<number>;
+  countMessages?(
+    messages: readonly {
+      readonly role: "system" | "user";
+      readonly content: string;
+    }[],
+  ): number | Promise<number>;
   count(text: string): number | Promise<number>;
 }
 

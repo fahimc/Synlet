@@ -33,7 +33,8 @@ for (const item of cases) {
 const report = {
   schemaVersion: "synlet.eval-report/v1",
   evidence: "MEASURED_SMOKE_ONLY_NOT_QUALITY_BENCHMARK",
-  limitations: "Three smoke prompts; not a specialist or end-to-end quality benchmark. Run held-out agent evaluations separately.",
+  limitations:
+    "Three smoke prompts; not a specialist or end-to-end quality benchmark. Run held-out agent evaluations separately.",
   samples: results.length,
   passed: results.filter((item) => item.passed).length,
   results,

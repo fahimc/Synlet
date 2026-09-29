@@ -51,7 +51,11 @@ export class McpClientManager {
     return definitions;
   }
 
-  async execute(toolId: string, arguments_: Json, signal?: AbortSignal): Promise<Json> {
+  async execute(
+    toolId: string,
+    arguments_: Json,
+    signal?: AbortSignal,
+  ): Promise<Json> {
     signal?.throwIfAborted();
     const match = /^mcp\.([^.]+)\.(.+)$/u.exec(toolId);
     if (!match)
@@ -71,14 +75,27 @@ export class McpClientManager {
     };
     signal?.addEventListener("abort", abort, { once: true });
     try {
-      if (signal?.aborted) { abort(); signal.throwIfAborted(); }
-      const result = await connection.client.callTool({ name: toolName, arguments: argumentsObject });
+      if (signal?.aborted) {
+        abort();
+        signal.throwIfAborted();
+      }
+      const result = await connection.client.callTool({
+        name: toolName,
+        arguments: argumentsObject,
+      });
       signal?.throwIfAborted();
       return json(result);
     } catch (error) {
-      if (signal?.aborted) throw new DomainError("OUTCOME_UNKNOWN", "MCP transport stopped; remote side effects must be reconciled, not replayed");
+      if (signal?.aborted)
+        throw new DomainError(
+          "OUTCOME_UNKNOWN",
+          "MCP transport stopped; remote side effects must be reconciled, not replayed",
+        );
       throw error;
-    } finally { signal?.removeEventListener("abort", abort); await stopping; }
+    } finally {
+      signal?.removeEventListener("abort", abort);
+      await stopping;
+    }
   }
 
   async close(): Promise<void> {

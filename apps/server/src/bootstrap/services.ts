@@ -146,32 +146,61 @@ export async function createServices(
       : { failAfterWrite: overrides.failAfterWrite }),
   });
   const skills = new RuntimeSkillRegistry(resolve("skills"));
-  const agentTools = overrides.agentTools ?? new AgentToolRouter(
-    safeTools,
-    new PlaywrightBrowserAdapter(
-      resolve(profile.paths.browserExecutable),
-      resolve(dataRoot, "browser-profile"),
-      { allowedDomains: ["*"], maxTextChars: 32_000, headless: false },
-    ),
-    new McpClientManager(resolve("config/mcp.servers.json")),
-    process.cwd(),
-  );
+  const agentTools =
+    overrides.agentTools ??
+    new AgentToolRouter(
+      safeTools,
+      new PlaywrightBrowserAdapter(
+        resolve(profile.paths.browserExecutable),
+        resolve(dataRoot, "browser-profile"),
+        { allowedDomains: ["*"], maxTextChars: 32_000, headless: false },
+      ),
+      new McpClientManager(resolve("config/mcp.servers.json")),
+      process.cwd(),
+    );
   const pythonWorker = new PythonCapabilityRouter(
     resolve(profile.paths.pythonExecutable),
     resolve("services/python-worker"),
     {
       SYNLET_JULIA_MODEL_ROOT: resolve(profile.paths.modelRoot, "Julia-1"),
-      SYNLET_EMBEDDING_MODEL_ROOT: resolve(profile.paths.modelRoot, "EmbeddingGemma-300m"),
+      SYNLET_EMBEDDING_MODEL_ROOT: resolve(
+        profile.paths.modelRoot,
+        "EmbeddingGemma-300m",
+      ),
       PYTHONPATH: resolve("services/python-worker/src"),
       JULIA_CPU_THREADS: "4",
     },
     ["-m", "synlet_worker.worker"],
   );
   const capabilityRouter = overrides.capabilityRouter ?? pythonWorker;
-  const embedding = overrides.model ? undefined : models.enabledFor("embedding");
+  const embedding = overrides.model
+    ? undefined
+    : models.enabledFor("embedding");
   const tokenizer = {
     count: (text: string) => model.countInput(controller.modelId, text),
-    countMessages: (messages: readonly {readonly role:"system"|"user";readonly content:string}[]) => model.countRequest ? model.countRequest({requestId:"context-count",modelId:controller.modelId,prompt:"",messages,maxOutputTokens:-1,deadlineUtc:new Date(Date.now()+30000).toISOString(),allowedTools:[]},AbortSignal.timeout(30000)) : model.countInput(controller.modelId,messages.map(m=>`${m.role}: ${m.content}`).join("\n")),
+    countMessages: (
+      messages: readonly {
+        readonly role: "system" | "user";
+        readonly content: string;
+      }[],
+    ) =>
+      model.countRequest
+        ? model.countRequest(
+            {
+              requestId: "context-count",
+              modelId: controller.modelId,
+              prompt: "",
+              messages,
+              maxOutputTokens: -1,
+              deadlineUtc: new Date(Date.now() + 30000).toISOString(),
+              allowedTools: [],
+            },
+            AbortSignal.timeout(30000),
+          )
+        : model.countInput(
+            controller.modelId,
+            messages.map((m) => `${m.role}: ${m.content}`).join("\n"),
+          ),
   };
   const sources = embedding
     ? new SourceService(
@@ -211,7 +240,11 @@ export async function createServices(
         : [];
     }),
   ];
-  const compactor = new ModelSourcePreservingCompactor(model, firstLlm.modelId, 300_000);
+  const compactor = new ModelSourcePreservingCompactor(
+    model,
+    firstLlm.modelId,
+    300_000,
+  );
   const agent = new AgentHarness(
     new SqliteAgentRunStore(database),
     model,
@@ -234,7 +267,11 @@ export async function createServices(
     },
     {
       checkpoints: new SqliteAgentCheckpoints(database),
-      context: new AgentContext(new SqliteAgentMemory(database, sources, sourceStore), model, compactor),
+      context: new AgentContext(
+        new SqliteAgentMemory(database, sources, sourceStore),
+        model,
+        compactor,
+      ),
     },
   );
   return {
@@ -255,7 +292,10 @@ export async function createServices(
     ),
     sources,
     context: new ContextEngine(
-      { search: async (query, _limit, access) => sources.search(query, access), scanAll: access => sourceStore.scanAll(access) },
+      {
+        search: async (query, _limit, access) => sources.search(query, access),
+        scanAll: (access) => sourceStore.scanAll(access),
+      },
       tokenizer,
       compactor,
       {

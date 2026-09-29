@@ -78,25 +78,53 @@ export class SourceService {
       try {
         for (let offset = 0; offset < chunks.length; offset += 64) {
           const batch = chunks.slice(offset, offset + 64);
-          const embedded = await this.embeddings.embed({
-            requestId: this.ids.next("embedding"), taskId: source.sourceId,
-            inputs: batch.map(chunk => chunk.text), purpose: "document",
-            deadlineUtc: new Date(Date.now() + 300000).toISOString(),
-          }, AbortSignal.timeout(300000));
-          if (embedded.vectors.length !== batch.length || (modelVersion && modelVersion !== embedded.modelVersion)) throw new DomainError("INVALID_OUTPUT", "Embedding batch count/version mismatch");
+          const embedded = await this.embeddings.embed(
+            {
+              requestId: this.ids.next("embedding"),
+              taskId: source.sourceId,
+              inputs: batch.map((chunk) => chunk.text),
+              purpose: "document",
+              deadlineUtc: new Date(Date.now() + 300000).toISOString(),
+            },
+            AbortSignal.timeout(300000),
+          );
+          if (
+            embedded.vectors.length !== batch.length ||
+            (modelVersion && modelVersion !== embedded.modelVersion)
+          )
+            throw new DomainError(
+              "INVALID_OUTPUT",
+              "Embedding batch count/version mismatch",
+            );
           modelVersion = embedded.modelVersion;
           for (const vector of embedded.vectors) {
-            if (!vector.length || vector.some(value => !Number.isFinite(value)) || (vectors[0] && vector.length !== vectors[0].length)) throw new DomainError("INVALID_OUTPUT", "Invalid embedding dimension/value");
+            if (
+              !vector.length ||
+              vector.some((value) => !Number.isFinite(value)) ||
+              (vectors[0] && vector.length !== vectors[0].length)
+            )
+              throw new DomainError(
+                "INVALID_OUTPUT",
+                "Invalid embedding dimension/value",
+              );
             vectors.push(vector);
           }
         }
       } catch (error) {
-        if (await this.store.artifactReferenceCount(artifact.hash) === 0) await this.artifacts.delete(artifact.hash);
+        if ((await this.store.artifactReferenceCount(artifact.hash)) === 0)
+          await this.artifacts.delete(artifact.hash);
         throw error;
       }
     }
     const stored = await this.store.add({ source, chunks }, access);
-    if (this.semanticIndex && modelVersion) for (let index = 0; index < chunks.length; index++) this.semanticIndex.upsert(chunks[index]!.chunkId, modelVersion, vectors[index]!, access);
+    if (this.semanticIndex && modelVersion)
+      for (let index = 0; index < chunks.length; index++)
+        this.semanticIndex.upsert(
+          chunks[index]!.chunkId,
+          modelVersion,
+          vectors[index]!,
+          access,
+        );
     return stored;
   }
 

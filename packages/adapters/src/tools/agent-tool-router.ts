@@ -1,5 +1,10 @@
 import Ajv from "ajv";
-import { DomainError, type AgentToolDefinition, type AgentToolPort, type Json } from "@synlet/core";
+import {
+  DomainError,
+  type AgentToolDefinition,
+  type AgentToolPort,
+  type Json,
+} from "@synlet/core";
 import type { PlaywrightBrowserAdapter } from "../browser/playwright-browser.js";
 import type { McpClientManager } from "../mcp/mcp-client-manager.js";
 import type { SafeToolAdapter } from "./safe-tools.js";
@@ -121,37 +126,147 @@ const hostTools: readonly AgentToolDefinition[] = [
   },
 ];
 
-
 const additional: readonly AgentToolDefinition[] = [
- { id: "file.write", title: "Write any host file", description: "Create or replace a launch-user-accessible file, including absolute paths outside the workspace. This is intentionally unrestricted.", inputSchema: { type: "object", properties: { path: { type: "string" }, content: { type: "string" } }, required: ["path","content"], additionalProperties:false }, source:"host" },
- { id: "file.delete", title: "Delete host path", description: "Delete a file or directory accessible to the launch user. recursive/force are explicit arguments. No workspace boundary.", inputSchema: { type:"object", properties:{path:{type:"string"},recursive:{type:"boolean"},force:{type:"boolean"}}, required:["path"],additionalProperties:false },source:"host" },
- { id: "image.open", title: "Read image from host", description: "Read an image at any accessible path and provide its real pixels to the vision specialist.",inputSchema:{type:"object",properties:{path:{type:"string"}},required:["path"],additionalProperties:false},source:"host"},
- { id:"browser.screenshot",title:"Capture browser image",description:"Capture actual pixels of the dedicated browser; returns an image reference for vision.",inputSchema:{type:"object",properties:{url:{type:"string"}},required:["url"],additionalProperties:false},source:"browser"}
+  {
+    id: "file.write",
+    title: "Write any host file",
+    description:
+      "Create or replace a launch-user-accessible file, including absolute paths outside the workspace. This is intentionally unrestricted.",
+    inputSchema: {
+      type: "object",
+      properties: { path: { type: "string" }, content: { type: "string" } },
+      required: ["path", "content"],
+      additionalProperties: false,
+    },
+    source: "host",
+  },
+  {
+    id: "file.delete",
+    title: "Delete host path",
+    description:
+      "Delete a file or directory accessible to the launch user. recursive/force are explicit arguments. No workspace boundary.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        path: { type: "string" },
+        recursive: { type: "boolean" },
+        force: { type: "boolean" },
+      },
+      required: ["path"],
+      additionalProperties: false,
+    },
+    source: "host",
+  },
+  {
+    id: "image.open",
+    title: "Read image from host",
+    description:
+      "Read an image at any accessible path and provide its real pixels to the vision specialist.",
+    inputSchema: {
+      type: "object",
+      properties: { path: { type: "string" } },
+      required: ["path"],
+      additionalProperties: false,
+    },
+    source: "host",
+  },
+  {
+    id: "browser.screenshot",
+    title: "Capture browser image",
+    description:
+      "Capture actual pixels of the dedicated browser; returns an image reference for vision.",
+    inputSchema: {
+      type: "object",
+      properties: { url: { type: "string" } },
+      required: ["url"],
+      additionalProperties: false,
+    },
+    source: "browser",
+  },
 ];
 export class AgentToolRouter implements AgentToolPort {
   private readonly files: FullControlFiles;
-  private readonly validator = new Ajv({ strict: false, allErrors: true, validateFormats: false });
-  constructor(private readonly safeTools: SafeToolAdapter, private readonly browser: PlaywrightBrowserAdapter, private readonly mcp: McpClientManager, private readonly defaultCwd: string) { this.files = new FullControlFiles(defaultCwd); }
-  async catalog(): Promise<readonly AgentToolDefinition[]> { return [...hostTools, ...additional, ...await this.mcp.catalog()]; }
-  async execute(toolId: string, arguments_: Json, signal?: AbortSignal): Promise<Json> {
+  private readonly validator = new Ajv({
+    strict: false,
+    allErrors: true,
+    validateFormats: false,
+  });
+  constructor(
+    private readonly safeTools: SafeToolAdapter,
+    private readonly browser: PlaywrightBrowserAdapter,
+    private readonly mcp: McpClientManager,
+    private readonly defaultCwd: string,
+  ) {
+    this.files = new FullControlFiles(defaultCwd);
+  }
+  async catalog(): Promise<readonly AgentToolDefinition[]> {
+    return [...hostTools, ...additional, ...(await this.mcp.catalog())];
+  }
+  async execute(
+    toolId: string,
+    arguments_: Json,
+    signal?: AbortSignal,
+  ): Promise<Json> {
     signal?.throwIfAborted();
-    const definition = (await this.catalog()).find(tool => tool.id === toolId);
-    if (!definition) throw new DomainError("INVALID_OUTPUT", `Unknown tool: ${toolId}`);
+    const definition = (await this.catalog()).find(
+      (tool) => tool.id === toolId,
+    );
+    if (!definition)
+      throw new DomainError("INVALID_OUTPUT", `Unknown tool: ${toolId}`);
     const valid = this.validator.compile(definition.inputSchema as object);
-    if (!valid(arguments_)) throw new DomainError("INVALID_OUTPUT", `Tool arguments violate schema: ${this.validator.errorsText(valid.errors)}`);
-    if (!arguments_ || typeof arguments_ !== "object" || Array.isArray(arguments_)) throw new DomainError("INVALID_OUTPUT", "Tool arguments must be an object");
+    if (!valid(arguments_))
+      throw new DomainError(
+        "INVALID_OUTPUT",
+        `Tool arguments violate schema: ${this.validator.errorsText(valid.errors)}`,
+      );
+    if (
+      !arguments_ ||
+      typeof arguments_ !== "object" ||
+      Array.isArray(arguments_)
+    )
+      throw new DomainError(
+        "INVALID_OUTPUT",
+        "Tool arguments must be an object",
+      );
     const args = arguments_ as Record<string, Json>;
-    const text = (key: string) => { const value=args[key]; if(typeof value!=="string")throw new DomainError("INVALID_OUTPUT", `${key} must be a string`); return value; };
-    if (toolId.startsWith("file.") || toolId === "image.open") return this.files.execute(toolId, args, signal);
-    if (toolId === "calculator") return this.safeTools.execute(toolId,args);
-    if (toolId === "command.run") return runHostCommand(args,this.defaultCwd,signal);
-    if (toolId === "browser.search") return this.browser.search(text("query"),signal);
-    if (toolId === "browser.inspect") return this.browser.inspect(text("url"),signal);
-    if (toolId === "browser.screenshot") return this.browser.screenshot(text("url"),signal);
-    if (toolId === "browser.click") return this.browser.clickAndObserve(text("url"), text("role") as "button"|"link",text("name"),signal);
-    if (toolId === "browser.type") return this.browser.typeAndObserve(text("url"),text("label"),text("value"),args.submit===true,signal);
-    if (toolId.startsWith("mcp.")) return this.mcp.execute(toolId,args,signal);
+    const text = (key: string) => {
+      const value = args[key];
+      if (typeof value !== "string")
+        throw new DomainError("INVALID_OUTPUT", `${key} must be a string`);
+      return value;
+    };
+    if (toolId.startsWith("file.") || toolId === "image.open")
+      return this.files.execute(toolId, args, signal);
+    if (toolId === "calculator") return this.safeTools.execute(toolId, args);
+    if (toolId === "command.run")
+      return runHostCommand(args, this.defaultCwd, signal);
+    if (toolId === "browser.search")
+      return this.browser.search(text("query"), signal);
+    if (toolId === "browser.inspect")
+      return this.browser.inspect(text("url"), signal);
+    if (toolId === "browser.screenshot")
+      return this.browser.screenshot(text("url"), signal);
+    if (toolId === "browser.click")
+      return this.browser.clickAndObserve(
+        text("url"),
+        text("role") as "button" | "link",
+        text("name"),
+        signal,
+      );
+    if (toolId === "browser.type")
+      return this.browser.typeAndObserve(
+        text("url"),
+        text("label"),
+        text("value"),
+        args.submit === true,
+        signal,
+      );
+    if (toolId.startsWith("mcp."))
+      return this.mcp.execute(toolId, args, signal);
     throw new DomainError("INVALID_OUTPUT", "Tool has no adapter");
   }
-  async close(): Promise<void> { await this.browser.close(); await this.mcp.close(); }
+  async close(): Promise<void> {
+    await this.browser.close();
+    await this.mcp.close();
+  }
 }

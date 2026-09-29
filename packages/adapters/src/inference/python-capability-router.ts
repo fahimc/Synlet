@@ -56,7 +56,8 @@ export class PythonCapabilityRouter
   ): Promise<AgentCapabilityRoute> {
     signal.throwIfAborted();
     const remainingMs = Date.parse(request.deadlineUtc) - Date.now();
-    if (remainingMs <= 0) throw new DomainError("TIMEOUT", "Worker deadline expired");
+    if (remainingMs <= 0)
+      throw new DomainError("TIMEOUT", "Worker deadline expired");
     signal = AbortSignal.any([signal, AbortSignal.timeout(remainingMs)]);
     const child = this.ensureStarted();
     const response = await new Promise<WorkerResponse>((resolve, reject) => {
@@ -79,7 +80,12 @@ export class PythonCapabilityRouter
         stepId: "route",
         deadlineUtc: request.deadlineUtc,
         operation: "route",
-        inputs: [JSON.stringify({ goal: request.goal, hasImages: request.hasImages === true })],
+        inputs: [
+          JSON.stringify({
+            goal: request.goal,
+            hasImages: request.hasImages === true,
+          }),
+        ],
       };
       child.stdin.write(`${JSON.stringify(payload)}\n`, (error) => {
         if (!error) return;
@@ -121,7 +127,8 @@ export class PythonCapabilityRouter
   }> {
     signal.throwIfAborted();
     const remainingMs = Date.parse(request.deadlineUtc) - Date.now();
-    if (remainingMs <= 0) throw new DomainError("TIMEOUT", "Worker deadline expired");
+    if (remainingMs <= 0)
+      throw new DomainError("TIMEOUT", "Worker deadline expired");
     signal = AbortSignal.any([signal, AbortSignal.timeout(remainingMs)]);
     const child = this.ensureStarted();
     const response = await new Promise<WorkerResponse>((resolve, reject) => {
@@ -143,7 +150,9 @@ export class PythonCapabilityRouter
           stepId: "embed",
           deadlineUtc: request.deadlineUtc,
           operation: "embed",
-          inputs: request.inputs.map(text => JSON.stringify({ text, kind: request.purpose ?? "document" })),
+          inputs: request.inputs.map((text) =>
+            JSON.stringify({ text, kind: request.purpose ?? "document" }),
+          ),
         })}\n`,
         (error) => {
           if (!error) return;

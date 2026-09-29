@@ -77,5 +77,11 @@ export interface RetrievedChunk {
   readonly stale: boolean;
 }
 
-export interface ChatMessage { readonly role: "system" | "developer" | "user" | "assistant"; readonly content: string }
-export interface ImageInput { readonly id: string; readonly dataUrl: string }
+export interface ChatMessage {
+  readonly role: "system" | "developer" | "user" | "assistant";
+  readonly content: string;
+}
+export interface ImageInput {
+  readonly id: string;
+  readonly dataUrl: string;
+}

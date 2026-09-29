@@ -25,7 +25,10 @@ test("dedicated Playwright session inspects and observes an owned fixture", asyn
     await rm(root, { recursive: true, force: true });
   });
   const browser = new PlaywrightBrowserAdapter(
-    process.env.SYNLET_TEST_BROWSER === "chromium" ? "" : (process.env.SYNLET_BROWSER_EXECUTABLE ?? "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"),
+    process.env.SYNLET_TEST_BROWSER === "chromium"
+      ? ""
+      : (process.env.SYNLET_BROWSER_EXECUTABLE ??
+          "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"),
     root,
     { allowedDomains: ["127.0.0.1"], maxTextChars: 4096, headless: true },
   );

@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 const baseUrl = process.env.SYNLET_LIVE_BASE_URL ?? "http://127.0.0.1:43127";
-if (!process.env.SYNLET_LIVE_AUTH_TOKEN) throw new Error("Set SYNLET_LIVE_AUTH_TOKEN to the private operator token before running live tests");
+if (!process.env.SYNLET_LIVE_AUTH_TOKEN)
+  throw new Error(
+    "Set SYNLET_LIVE_AUTH_TOKEN to the private operator token before running live tests",
+  );
 const headers = {
   authorization: `Bearer ${process.env.SYNLET_LIVE_AUTH_TOKEN}`,
   "content-type": "application/json",

@@ -12,9 +12,18 @@ async function operatorToken(): Promise<string> {
   login ??= new Promise<string>((resolveToken) => {
     const box = document.createElement("form");
     box.id = "synlet-login";
-    box.style.cssText = "position:fixed;z-index:9999;inset:25% 15%;padding:32px;background:#17202b;color:white;border:1px solid #888;border-radius:12px";
-    box.innerHTML = '<h2>Synlet full-control sign in</h2><p>Paste the operator token from runtime-data/operator-auth.json. Anyone with this token has full launch-user PC access. Keep remote proxy authentication enabled.</p><input aria-label="Operator token" type="password" autocomplete="off" required style="width:100%;padding:12px"><button type="submit">Connect</button>';
-    box.onsubmit = event => { event.preventDefault(); const token=box.querySelector("input")!.value.trim(); if(!token)return; window.sessionStorage.setItem("synlet-operator-token",token);box.remove();resolveToken(token); };
+    box.style.cssText =
+      "position:fixed;z-index:9999;inset:25% 15%;padding:32px;background:#17202b;color:white;border:1px solid #888;border-radius:12px";
+    box.innerHTML =
+      '<h2>Synlet full-control sign in</h2><p>Paste the operator token from runtime-data/operator-auth.json. Anyone with this token has full launch-user PC access. Keep remote proxy authentication enabled.</p><input aria-label="Operator token" type="password" autocomplete="off" required style="width:100%;padding:12px"><button type="submit">Connect</button>';
+    box.onsubmit = (event) => {
+      event.preventDefault();
+      const token = box.querySelector("input")!.value.trim();
+      if (!token) return;
+      window.sessionStorage.setItem("synlet-operator-token", token);
+      box.remove();
+      resolveToken(token);
+    };
     document.body.append(box);
   });
   return login;
@@ -60,7 +69,10 @@ async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   const value = (await response.json()) as
     T | { code?: string; message?: string };
   if (!response.ok) {
-    if (response.status === 401) { window.sessionStorage.removeItem("synlet-operator-token"); login=undefined; }
+    if (response.status === 401) {
+      window.sessionStorage.removeItem("synlet-operator-token");
+      login = undefined;
+    }
     const error = value as { code?: string; message?: string };
     throw new Error(error.message ?? error.code ?? `HTTP ${response.status}`);
   }
