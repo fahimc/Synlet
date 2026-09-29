@@ -8,7 +8,7 @@ Synlet is a proposed local AI assistant powered by **SOMA — Specialist Orchest
 > Julia-1 router on CPU; MiniCPM5 controller, Nanbeige math specialist, LFM vision
 > specialist and Qwen3.5 compactor through a pinned llama.cpp CUDA router; and
 > EmbeddingGemma on CPU. Model and runtime files are SHA-256 locked, inference and
-> retrieval are measured, and no cloud model or OpenAI account is required.
+> retrieval use the local runtime; CPU engineering tests are separate from live model-quality measurements. No cloud model or OpenAI account is required.
 
 ## Full-control operating contract
 
@@ -21,7 +21,7 @@ model roster. Julia-1 classifies finite capabilities, Qwen3.5-0.8B selects a
 versioned skill without reasoning, and the reasoning-enabled MiniCPM5 controller can
 consult enabled specialists, call configured
 MCP servers, search the live web, drive a dedicated Edge profile, read and patch
-workspace files, and run non-interactive host commands. Every route is persisted in
+host files (including paths outside the workspace), delete accessible files, and run arbitrary non-interactive host commands. Every route is persisted in
 SQLite and appears in the chat as a live task-flow diagram while the run is active.
 
 The lower-level authenticated task, approval, source, retrieval and context APIs remain
@@ -33,6 +33,8 @@ pnpm check
 pnpm test:contracts
 pnpm test:integration
 pnpm test:security
+pnpm test:context
+pnpm test:python-contracts
 pnpm test:e2e
 pnpm eval:local
 pnpm smoke:models
@@ -62,7 +64,7 @@ until measurements justify it.
 - MCP servers are configured in `config/mcp.servers.json`. The bundled stdio server
   provides `echo` and `runtime_info`, proving discovery and tool calls end to end.
 - Runtime skills live under `skills/<name>/<version>/` and contribute bounded
-  instructions, allowed tools and completion checks to the controller.
+  instructions, suggested tools and completion checks to the controller. Skills do not restrict the full-control tool catalogue.
 - The agent pipeline is Julia classification, Qwen3.5-0.8B skill selection, then the
   MiniCPM controller loop. Reasoning is disabled for Julia, the Qwen selection and
   Qwen compaction; it is enabled for MiniCPM and configured per specialist. Generation
@@ -85,6 +87,10 @@ With the local stack running, `pnpm test:live-agent` sends unassisted natural-la
 questions about current time, CPU utilization and current UK headlines. It verifies
 that the model discovers a generic shell/browser approach and grounds each answer in
 real observations; the prompts do not name tools, commands or expected answers.
+
+## Independent model evaluation
+
+`pnpm eval:harness` evaluates the actual shared agent path, including multi-turn memory, using exact independent answer checks and persisted traces. See [the model evaluation runbook](docs/runbooks/model-evaluation.md) for private suites, operator-token setup and an optional `SYNLET_MODEL_STRATEGY=controller-only` comparison with the same unrestricted tools. The ten bundled cases are public regression fixtures, not a private benchmark or proof of general PC-management quality. The default strategy remains `adaptive`.
 
 ## Start here
 

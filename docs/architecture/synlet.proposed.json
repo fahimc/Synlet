@@ -1,6 +1,6 @@
 {
   "schema": "synlet.proposed/v0.1",
-  "status": "DESIGN_ONLY_NOT_IMPLEMENTED",
+  "status": "DESIGN_REFERENCE_USE_CONFIG_PROFILES_FOR_RUNTIME",
   "public_model": "synlet-local",
   "bind_host": "127.0.0.1",
   "gateway_port": 43127,
@@ -57,7 +57,7 @@
   },
   "scheduler": {
     "max_gpu_generations": 1,
-    "max_resident_generative_models": 2,
+    "max_resident_generative_models": 1,
     "vram_headroom_gib": 2,
     "admission": "measured_profiles_plus_live_free_memory",
     "max_pending_inference_jobs": 16,
@@ -85,8 +85,14 @@
     "max_validation_retries": 2,
     "max_repair_retries": 2,
     "cloud_fallback": false,
-    "shell_default": "blocked",
-    "external_writes": "approval_required"
+    "shell_default": "unrestricted",
+    "external_writes": "allowed_as_authenticated_launch_user",
+    "mode": "full-control",
+    "command_allowlist": false,
+    "semantic_execution_routes": false,
+    "workspace_is_sandbox": false,
+    "operator_authentication": "required",
+    "unknown_effects": "reconcile_before_replay"
   },
   "release_gate": {
     "pin_all_revisions": true,
@@ -94,21 +100,21 @@
     "require_runtime_smoke_tests": true,
     "licence_review_required": true
   },
-  "blueprint_version": "0.2",
+  "blueprint_version": "0.3-full-control",
   "architecture": {
     "style": "modular-monolith-with-isolated-workers",
     "composition_root": "apps/server/src/bootstrap",
     "deployment_profile": "local-12gb",
     "api_version": "v1",
     "worker_protocol_version": "v1",
-    "default_tenancy": "single-local-user-project-scoped",
+    "default_tenancy": "single-authenticated-operator",
     "codex_runtime_dependency": false,
     "name": "SOMA",
     "full_name": "Specialist Orchestration and Memory Architecture"
   },
   "build": {
-    "default_mode": "mock",
-    "node_baseline": "24 LTS; exact tested patch to be locked in T00",
+    "default_mode": "local",
+    "node_baseline": "24.21.0 (current tested runtime lock)",
     "required_locks": [
       "pnpm-lock.yaml",
       "services/python-worker/uv.lock",
