@@ -52,9 +52,18 @@ jobs:
               target.write_text(text, encoding='utf-8')
           PY
             python3 .review-work/apply.py
+            git restore -- .github/workflows
             rm -rf .review-work .review-patch
             git add -A
             git commit -m 'fix: integrate source-aware durable full-control SOMA harness'
+            git push origin HEAD:fix/soma-harness-review
+          fi
+          if [ -f .review-followup.py ]; then
+            python3 .review-followup.py
+            rm .review-followup.py
+            git restore -- .github/workflows
+            git add -A
+            git commit -m 'fix: address remediation validation regressions'
             git push origin HEAD:fix/soma-harness-review
           fi
       - name: Resolve explicit dependency change and format sources
@@ -65,6 +74,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          git restore -- .github/workflows
           git add -A
           if ! git diff --cached --quiet; then
             git commit -m 'chore: lock and format review remediation'
