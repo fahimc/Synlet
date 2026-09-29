@@ -52,13 +52,10 @@ function accessFor(
       (typeof requestedProject !== "string" ||
         !principal.projectIds.includes(requestedProject)))
   ) {
-    void reply
-      .code(403)
-      .send({
-        code: "POLICY_DENIED",
-        message:
-          "Caller headers cannot change the authenticated operator scope",
-      });
+    void reply.code(403).send({
+      code: "POLICY_DENIED",
+      message: "Caller headers cannot change the authenticated operator scope",
+    });
     return undefined;
   }
   const projectId =
@@ -66,12 +63,10 @@ function accessFor(
       ? requestedProject
       : principal.projectIds[0];
   if (!projectId) {
-    void reply
-      .code(403)
-      .send({
-        code: "POLICY_DENIED",
-        message: "Operator has no configured project",
-      });
+    void reply.code(403).send({
+      code: "POLICY_DENIED",
+      message: "Operator has no configured project",
+    });
     return undefined;
   }
   return {

@@ -538,13 +538,11 @@ export class AgentHarness {
           observations: [...observations],
         });
         // Descriptors are bounded; complete originals remain available through context.read.
-        const evidence = observations
-          .slice(-8)
-          .map((o) => ({
-            ...o,
-            result: observationBrief(o.result),
-            fullEvidence: `Search observation ${o.id} to recover the complete original.`,
-          }));
+        const evidence = observations.slice(-8).map((o) => ({
+          ...o,
+          result: observationBrief(o.result),
+          fullEvidence: `Search observation ${o.id} to recover the complete original.`,
+        }));
         const available = this.options.specialists.filter(
           (s) => s.role !== "vision" || images.length > 0,
         );

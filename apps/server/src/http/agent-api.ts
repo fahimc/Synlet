@@ -71,13 +71,10 @@ export function installAgentApi(
       !body.prompt.trim() ||
       Buffer.byteLength(body.prompt) > 1024 * 1024
     )
-      return reply
-        .code(400)
-        .send({
-          code: "INVALID_REQUEST",
-          message:
-            "Valid sessionId and nonempty prompt up to 1 MiB are required",
-        });
+      return reply.code(400).send({
+        code: "INVALID_REQUEST",
+        message: "Valid sessionId and nonempty prompt up to 1 MiB are required",
+      });
     const key = request.headers["idempotency-key"];
     if (
       key !== undefined &&
@@ -104,13 +101,11 @@ export function installAgentApi(
       body.model !== "synlet-local" ||
       body.stream === true
     )
-      return reply
-        .code(400)
-        .send({
-          code: "UNSUPPORTED_OPTION",
-          message:
-            "Supported: model=synlet-local, messages, stream=false, optional sessionId. Host tools run inside the same agent harness; client-supplied tools and streaming are not implemented.",
-        });
+      return reply.code(400).send({
+        code: "UNSUPPORTED_OPTION",
+        message:
+          "Supported: model=synlet-local, messages, stream=false, optional sessionId. Host tools run inside the same agent harness; client-supplied tools and streaming are not implemented.",
+      });
     if (
       !Array.isArray(body.messages) ||
       body.messages.length < 1 ||
@@ -187,14 +182,12 @@ export function installAgentApi(
       run = await services.agent.get(run.runId, access);
     }
     if (run.status !== "completed")
-      return reply
-        .code(run.status === "cancelled" ? 409 : 502)
-        .send({
-          code: "AGENT_NOT_COMPLETED",
-          runId: run.runId,
-          status: run.status,
-          message: run.result,
-        });
+      return reply.code(run.status === "cancelled" ? 409 : 502).send({
+        code: "AGENT_NOT_COMPLETED",
+        runId: run.runId,
+        status: run.status,
+        message: run.result,
+      });
     return {
       id: run.runId,
       object: "chat.completion",
