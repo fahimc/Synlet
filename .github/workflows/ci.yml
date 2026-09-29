@@ -36,6 +36,9 @@ jobs:
       - run: pnpm test:context
       - run: pnpm test:python-contracts
       - run: pnpm exec playwright-core install --with-deps chromium
+        if: runner.os == 'Linux'
+      - run: pnpm exec playwright-core install chromium
+        if: runner.os == 'Windows'
       - run: pnpm test:e2e
         env:
           SYNLET_TEST_BROWSER: chromium

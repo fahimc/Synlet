@@ -5,4 +5,3 @@ node_modules/
 packages/contracts/src/generated/
 apps/web/src/generated/
 pnpm-lock.yaml
-.github/workflows/soma-review-validation.yml
