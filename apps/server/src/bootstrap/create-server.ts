@@ -44,7 +44,7 @@ export async function createServer(
     },
   );
   const releaseHost = options.services?.model
-    ? async () => undefined
+    ? () => Promise.resolve()
     : await acquireHostLock(
         resolve(options.services?.dataRoot ?? options.profile.paths.dataRoot),
       );

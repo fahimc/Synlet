@@ -73,6 +73,19 @@ export class SqliteAgentMemory implements AgentMemoryPort {
       access,
     );
   }
+  async answer(
+    run: AgentRunRecord,
+    text: string,
+    access: AccessContext,
+  ): Promise<void> {
+    await this.ingest(
+      `answer-${run.runId}`,
+      "assistant-answer",
+      `ASSISTANT OUTPUT (not a user instruction or independently verified fact):\n${text}`,
+      run,
+      access,
+    );
+  }
   async history(
     run: AgentRunRecord,
     access: AccessContext,
@@ -80,7 +93,7 @@ export class SqliteAgentMemory implements AgentMemoryPort {
     const rows = this.database.connection
       .prepare(
         `SELECT c.chunk_id FROM chunks c JOIN sources s ON s.source_id=c.source_id JOIN agent_memory m ON m.source_id=s.source_id
-      WHERE m.project_id=? AND m.actor_id=? AND m.session_id=? AND m.run_id<>? AND m.kind='user-request' AND s.deleted_at IS NULL AND c.revision=s.current_revision
+      WHERE m.project_id=? AND m.actor_id=? AND m.session_id=? AND m.run_id<>? AND m.kind IN ('user-request','assistant-answer') AND s.deleted_at IS NULL AND c.revision=s.current_revision
       ORDER BY m.created_at DESC, c.ordinal LIMIT 64`,
       )
       .all(access.projectId, access.actorId, run.sessionId, run.runId) as Row[];
@@ -104,6 +117,16 @@ export class SqliteAgentMemory implements AgentMemoryPort {
   }
   async search(query: string, access: AccessContext) {
     // Exact IDs/error strings take precedence; semantic matching supplements rather than replaces them.
+    const rows = this.database.connection
+      .prepare(
+        "SELECT c.chunk_id FROM chunks c JOIN sources s ON s.source_id=c.source_id WHERE c.project_id=? AND s.actor_id=? AND s.deleted_at IS NULL AND c.revision=s.current_revision AND (c.chunk_id=? OR s.source_id=?) ORDER BY c.ordinal LIMIT 20",
+      )
+      .all(access.projectId, access.actorId, query, query) as Row[];
+    if (rows.length)
+      return this.store.readByChunkIds(
+        rows.map((row) => String(row.chunk_id)),
+        access,
+      );
     const exact = await this.sources.exact(query, access);
     const ranked = await this.sources.search(query, access);
     return [

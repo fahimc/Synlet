@@ -18,7 +18,7 @@ async function operatorToken(): Promise<string> {
       '<h2>Synlet full-control sign in</h2><p>Paste the operator token from runtime-data/operator-auth.json. Anyone with this token has full launch-user PC access. Keep remote proxy authentication enabled.</p><input aria-label="Operator token" type="password" autocomplete="off" required style="width:100%;padding:12px"><button type="submit">Connect</button>';
     box.onsubmit = (event) => {
       event.preventDefault();
-      const token = box.querySelector("input")!.value.trim();
+      const token = box.querySelector("input")?.value.trim() ?? "";
       if (!token) return;
       window.sessionStorage.setItem("synlet-operator-token", token);
       box.remove();

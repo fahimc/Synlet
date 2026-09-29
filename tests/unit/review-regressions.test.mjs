@@ -114,8 +114,8 @@ test("SSE parser rejects EOF/length and accepts split UTF-8 plus explicit comple
     'data: {"choices":[{"finish_reason":"length","delta":{"content":"{}"}}]}\n\ndata: [DONE]\n\n',
   ]) {
     await assert.rejects(async () => {
-      for await (const _event of completionEvents(new Response(stream), 1)) {
-        /* drain */
+      for await (const event of completionEvents(new Response(stream), 1)) {
+        assert.equal(event.type, "text_delta");
       }
     }, /Incomplete/u);
   }

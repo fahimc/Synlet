@@ -1,4 +1,4 @@
-import Ajv from "ajv";
+import { Ajv } from "ajv";
 import {
   DomainError,
   type AgentToolDefinition,

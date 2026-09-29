@@ -173,7 +173,12 @@ export class PlaywrightBrowserAdapter {
         abort();
         signal.throwIfAborted();
       }
-      const page = this.page!;
+      const page = this.page;
+      if (!page)
+        throw new DomainError(
+          "CAPABILITY_UNAVAILABLE",
+          "Dedicated browser page is unavailable",
+        );
       // Preserve forms and navigation across multiple steps; do not reload the same URL on every action.
       if (page.url() !== url)
         await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });

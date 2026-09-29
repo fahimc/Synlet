@@ -53,7 +53,7 @@ export function validateExtractiveSummary(
   chunks: readonly RetrievedChunk[],
 ): boolean {
   if (!text.trim() || refs.length === 0) return false;
-  const allowed = new Map(chunks.map((c) => [c.ref.chunkId, c]));
+  const allowed = new Map(chunks.map((chunk) => [chunk.ref.chunkId, chunk]));
   const declared = new Set<string>();
   for (const ref of refs) {
     const chunk = allowed.get(ref.chunkId);
@@ -67,15 +67,15 @@ export function validateExtractiveSummary(
     declared.add(ref.chunkId);
   }
   const used = new Set<string>();
-  for (const line of text.split(/\r?\n/u).filter((line) => line.trim())) {
+  for (const line of text.split(/\r?\n/u).filter((part) => part.trim())) {
     const match = /^\[([^\]]+)\] (.+)$/u.exec(line);
-    if (!match || !declared.has(match[1]!)) return false;
-    const original = allowed.get(match[1]!)!.text;
-    const quote = match[2]!;
-    // Whole supplied lines only: cannot turn “Do not delete” into “delete”.
-    if (!original.split(/\r?\n/u).some((value) => value.trim() === quote))
+    const id = match?.[1];
+    const quote = match?.[2];
+    if (!id || !quote || !declared.has(id)) return false;
+    const original = allowed.get(id);
+    if (!original?.text.split(/\r?\n/u).some((part) => part.trim() === quote))
       return false;
-    used.add(match[1]!);
+    used.add(id);
   }
   return used.size > 0 && [...declared].every((id) => used.has(id));
 }

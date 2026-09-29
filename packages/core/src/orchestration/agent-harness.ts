@@ -17,7 +17,7 @@ import type {
   ModelPort,
   ModelRequest,
 } from "../ports/index.js";
-import { AgentContext } from "../context/agent-context.js";
+import type { AgentContext } from "../context/agent-context.js";
 import { collectModelOutput } from "./model-output.js";
 import type {
   AgentCheckpointPort,
@@ -35,11 +35,11 @@ type Decision =
       summary: string;
     }
   | { type: "answer"; content: string; summary: string };
-type Specialist = {
+interface Specialist {
   readonly role: "code" | "math" | "vision";
   readonly modelId: string;
   readonly reasoning: "disabled" | "enabled" | "auto";
-};
+}
 export interface AgentHarnessOptions {
   readonly modelId: string;
   readonly selectorModelId: string;
@@ -644,7 +644,10 @@ export class AgentHarness {
             const result = {
               accepted: false,
               requiresMoreEvidence: review.requiresMoreEvidence === true,
-              feedback: String(review.feedback ?? "Invalid review"),
+              feedback:
+                typeof review.feedback === "string"
+                  ? review.feedback
+                  : "Invalid review",
             };
             await add(
               "harness.answer-review",
@@ -656,6 +659,11 @@ export class AgentHarness {
             continue;
           }
           signal.throwIfAborted();
+          await this.services.context?.complete(
+            original,
+            decision.content,
+            access,
+          );
           const checks = observations
             .filter((o) => o.tool === "verification.check")
             .map((o) => o.result);
@@ -904,13 +912,11 @@ function observationBrief(value: Json): Json {
       };
 }
 function parseDecision(text: string): Decision {
-  const value = JSON.parse(text) as Record<string, unknown>;
-  if (
-    !value ||
-    typeof value !== "object" ||
-    Array.isArray(value) ||
-    typeof value.summary !== "string"
-  )
+  const parsed: unknown = JSON.parse(text);
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+    throw new DomainError("INVALID_OUTPUT", "Invalid decision object");
+  const value = parsed as Record<string, unknown>;
+  if (typeof value.summary !== "string")
     throw new DomainError("INVALID_OUTPUT", "Invalid decision object");
   if (
     value.type === "answer" &&

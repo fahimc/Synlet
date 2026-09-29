@@ -117,7 +117,7 @@ export async function runHostCommand(
       // Non-empty stderr is NOT failure: many valid commands use stderr for warnings/progress.
       resolveResult({
         ok: code === 0 && !stopped,
-        command: args.command!,
+        command: args.command ?? "",
         cwd,
         platform: process.platform,
         shell,

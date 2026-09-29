@@ -59,6 +59,11 @@ export interface AgentCheckpointPort {
 }
 /** Every stored original is scoped. This port never grants shell permissions. */
 export interface AgentMemoryPort {
+  answer?(
+    run: AgentRunRecord,
+    text: string,
+    access: AccessContext,
+  ): Promise<void>;
   remember(
     run: AgentRunRecord,
     input: AgentInput,

@@ -12,7 +12,11 @@ const system =
   "You are Synlet, the user's fully authorised local PC administration assistant. Follow the authenticated user's request and accurately distinguish observations, model suggestions, and verified checks. You may use the host's unrestricted tools. Never invent execution, privileges, results or sources.";
 async function sha256(path: string): Promise<string> {
   const hash = createHash("sha256");
-  for await (const chunk of createReadStream(path)) hash.update(chunk);
+  for await (const chunk of createReadStream(path)) {
+    if (!Buffer.isBuffer(chunk))
+      throw new DomainError("INVALID_OUTPUT", "Expected binary model artifact");
+    hash.update(chunk);
+  }
   return hash.digest("hex");
 }
 export class LlamaServerAdapter implements ModelPort {
@@ -328,7 +332,7 @@ export async function* completionEvents(
   const decoder = new TextDecoder();
   let buffer = "";
   let finish: string | undefined;
-  let done = false;
+  const terminal: { done: boolean } = { done: false };
   let size = 0;
   let inputTokens = fallbackInput;
   let outputTokens = 0;
@@ -337,10 +341,10 @@ export async function* completionEvents(
     const data = line.slice(5).trim();
     if (!data) return;
     if (data === "[DONE]") {
-      done = true;
+      terminal.done = true;
       return;
     }
-    if (done)
+    if (terminal.done)
       throw new DomainError(
         "INVALID_OUTPUT",
         "Payload after stream terminator",
@@ -361,6 +365,7 @@ export async function* completionEvents(
     outputTokens = event.usage?.completion_tokens ?? outputTokens;
     if (choice?.delta?.content)
       return { type: "text_delta", text: choice.delta.content };
+    return undefined;
   };
   try {
     for (;;) {
@@ -385,10 +390,10 @@ export async function* completionEvents(
       const event = parse(buffer);
       if (event) yield event;
     }
-    if (!done || finish !== "stop")
+    if (!terminal.done || finish !== "stop")
       throw new DomainError(
         "INVALID_OUTPUT",
-        `Incomplete model stream (finish=${finish ?? "missing"}, terminator=${done})`,
+        `Incomplete model stream (finish=${finish ?? "missing"}, terminator=${terminal.done})`,
       );
     yield { type: "done", finish: "stop", inputTokens, outputTokens };
   } finally {

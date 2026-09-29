@@ -117,14 +117,18 @@ export class SourceService {
       }
     }
     const stored = await this.store.add({ source, chunks }, access);
-    if (this.semanticIndex && modelVersion)
-      for (let index = 0; index < chunks.length; index++)
-        this.semanticIndex.upsert(
-          chunks[index]!.chunkId,
-          modelVersion,
-          vectors[index]!,
-          access,
-        );
+    if (this.semanticIndex && modelVersion) {
+      for (let index = 0; index < chunks.length; index++) {
+        const chunk = chunks[index];
+        const vector = vectors[index];
+        if (!chunk || !vector)
+          throw new DomainError(
+            "INVALID_OUTPUT",
+            "Validated embedding batch is incomplete",
+          );
+        this.semanticIndex.upsert(chunk.chunkId, modelVersion, vector, access);
+      }
+    }
     return stored;
   }
 
