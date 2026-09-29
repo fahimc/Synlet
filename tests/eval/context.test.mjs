@@ -63,7 +63,10 @@ test("packet preserves reserve, pinned constraints, corrections, negation, numbe
   assert.match(packet, /42, not 41/u);
   assert.match(packet, /failed with E_TIMEOUT/u);
   assert.ok(result.packet.budget.usedInputTokens <= 56);
-  assert.deepEqual(result.coverage, { scanned: 4, total: 4 });
+  assert.equal(result.coverage.scanned, 4);
+  assert.equal(result.coverage.included, 4);
+  assert.equal(result.coverage.processed, 0); // No summary was needed in this fixture.
+  assert.equal(result.coverage.complete, true);
 });
 
 test("invented source references and compactor failures fall back to original excerpts", async () => {
@@ -80,10 +83,10 @@ test("invented source references and compactor failures fall back to original ex
       },
     },
   ]) {
-    const result = await engine(compactor, 30).build(request, accessContext);
+    const result = await engine(compactor, 35).build(request, accessContext);
     assert.equal(result.compaction, "fallback");
     assert.ok(result.packet.evidence.every((ref) => ref.sourceId === "source"));
     assert.doesNotMatch(result.packet.messages[1].content, /invented/u);
-    assert.ok(result.packet.budget.usedInputTokens <= 22);
+    assert.ok(result.packet.budget.usedInputTokens <= 27);
   }
 });

@@ -160,7 +160,7 @@ test("agent harness feeds an unavailable tool proposal back for replanning", asy
     prompt.includes("AVAILABLE TOOL IDS"),
   );
   assert.ok(planningPrompt);
-  assert.match(planningPrompt, /AVAILABLE TOOL IDS:\n\["command\.run"\]/u);
+  assert.match(planningPrompt, /AVAILABLE TOOL IDS:\n\["command\.run",/u);
   assert.doesNotMatch(planningPrompt, /"tool":"id"/u);
   assert.doesNotMatch(planningPrompt, /"final user-facing answer"/u);
   assert.doesNotMatch(planningPrompt, /"why complete"/u);
@@ -169,7 +169,7 @@ test("agent harness feeds an unavailable tool proposal back for replanning", asy
   );
   const decisionContract = JSON.stringify(planningRequest.responseSchema);
   assert.match(decisionContract, /"code"/u);
-  assert.doesNotMatch(decisionContract, /"math"/u);
+  assert.match(decisionContract, /"math"/u); // Router advice cannot hide enabled capabilities.
 });
 
 class IncrementingIds {

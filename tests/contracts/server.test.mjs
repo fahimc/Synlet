@@ -10,6 +10,7 @@ test("gateway serves measured local health and the local UI", async (context) =>
   const app = await createServer({
     profile: testProfile,
     authToken: "test-token",
+    principal: { actorId: "actor-a", projectIds: ["project-a"] },
     services: testServices({ databasePath: ":memory:" }),
     webRoot: resolve("apps/web/dist"),
   });

@@ -1,3 +1,5 @@
+Read ADR 0011 and the full-control remote administration runbook first. Preserve unrestricted shell/host-file access and LLM-driven execution; do not add predefined task routes.
+
 Implement the first unfinished build task for Synlet.
 
 First read AGENTS.md, docs/CODEX_BUILD_BRIEF.md, docs/BUILD_BACKLOG.md and

@@ -5,12 +5,21 @@ import { clearComposerValue, readComposerValue } from "@/components/ui";
 import { AgentHarness } from "@/generated/AgentHarness";
 import "./styles.css";
 
-const headers = {
-  authorization: "Bearer synlet-local",
-  "x-synlet-actor-id": "local-user",
-  "x-synlet-project-id": "local-project",
-  "content-type": "application/json",
-};
+let login: Promise<string> | undefined;
+async function operatorToken(): Promise<string> {
+  const stored = window.sessionStorage.getItem("synlet-operator-token");
+  if (stored) return stored;
+  login ??= new Promise<string>((resolveToken) => {
+    const box = document.createElement("form");
+    box.id = "synlet-login";
+    box.style.cssText = "position:fixed;z-index:9999;inset:25% 15%;padding:32px;background:#17202b;color:white;border:1px solid #888;border-radius:12px";
+    box.innerHTML = '<h2>Synlet full-control sign in</h2><p>Paste the operator token from runtime-data/operator-auth.json. Anyone with this token has full launch-user PC access. Keep remote proxy authentication enabled.</p><input aria-label="Operator token" type="password" autocomplete="off" required style="width:100%;padding:12px"><button type="submit">Connect</button>';
+    box.onsubmit = event => { event.preventDefault(); const token=box.querySelector("input")!.value.trim(); if(!token)return; window.sessionStorage.setItem("synlet-operator-token",token);box.remove();resolveToken(token); };
+    document.body.append(box);
+  });
+  return login;
+}
+const headers = { "content-type": "application/json" };
 
 interface AgentRun {
   readonly runId: string;
@@ -43,6 +52,7 @@ interface Message {
 
 async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   const requestHeaders = new Headers(headers);
+  requestHeaders.set("authorization", `Bearer ${await operatorToken()}`);
   new Headers(init.headers).forEach((value, key) =>
     requestHeaders.set(key, value),
   );
@@ -50,6 +60,7 @@ async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   const value = (await response.json()) as
     T | { code?: string; message?: string };
   if (!response.ok) {
+    if (response.status === 401) { window.sessionStorage.removeItem("synlet-operator-token"); login=undefined; }
     const error = value as { code?: string; message?: string };
     throw new Error(error.message ?? error.code ?? `HTTP ${response.status}`);
   }
@@ -184,7 +195,7 @@ function App() {
         );
         setRuntime(
           health.readiness === "ready"
-            ? "LOCAL · READY"
+            ? "LOCAL HOST · READY"
             : health.readiness.toUpperCase(),
         );
         setModel(
@@ -195,7 +206,7 @@ function App() {
         setCapabilities([
           {
             label: "GPU",
-            value: controller ? "connected" : "unavailable",
+            value: controller ? "configured" : "unavailable",
             tone: controller ? "success" : "danger",
           },
           {
@@ -296,6 +307,7 @@ function App() {
     try {
       const run = await api<AgentRun>("/api/v1/agent-runs", {
         method: "POST",
+        headers: { "idempotency-key": crypto.randomUUID() },
         body: JSON.stringify({ sessionId, prompt }),
       });
       setRuns((current) => [run, ...current]);

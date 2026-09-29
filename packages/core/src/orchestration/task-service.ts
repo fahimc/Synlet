@@ -34,6 +34,7 @@ function response(task: TaskRecord): TaskResponse {
 }
 
 export class TaskService {
+  private readonly active = new Map<string, AbortController>();
   constructor(
     private readonly store: TaskStorePort,
     private readonly model: ModelPort,
@@ -99,8 +100,10 @@ export class TaskService {
       access,
     );
     const controller = new AbortController();
+    this.active.set(running.taskId, controller);
     const timer = setTimeout(() => controller.abort(), this.options.timeoutMs);
     const output: string[] = [];
+    let completed = false;
     let inputTokens = 0;
     let outputTokens = 0;
     try {
@@ -119,6 +122,8 @@ export class TaskService {
       )) {
         if (event.type === "text_delta") output.push(event.text);
         if (event.type === "done") {
+          if (event.finish !== "stop") throw new DomainError("INVALID_OUTPUT", "Incomplete generation");
+          completed = true;
           inputTokens = event.inputTokens;
           outputTokens = event.outputTokens;
         }
@@ -126,8 +131,9 @@ export class TaskService {
           throw new DomainError("INVALID_OUTPUT", event.message);
         }
       }
+      if (controller.signal.aborted) throw new DomainError("CANCELLED", "Task cancelled");
       const text = output.join("").trim();
-      if (!text)
+      if (!completed || !text)
         throw new DomainError("INVALID_OUTPUT", "The model returned no text");
       return await this.store.commit(
         {
@@ -148,13 +154,15 @@ export class TaskService {
         access,
       );
     } catch (error) {
+      const current = await this.store.get(running.taskId, access);
+      const wasCancelled = current?.status === "cancel_requested";
       const message =
         error instanceof Error ? error.message : "Model execution failed";
       await this.store.commit(
         {
           taskId: running.taskId,
-          expectedRevision: running.revision,
-          nextStatus: "failed",
+          expectedRevision: current?.revision ?? running.revision,
+          nextStatus: wasCancelled ? "cancelled" : "failed",
           eventType: "task.failed",
           eventData: { modelId: this.options.modelId, message },
           outbox: [],
@@ -165,6 +173,7 @@ export class TaskService {
       throw error;
     } finally {
       clearTimeout(timer);
+      this.active.delete(running.taskId);
     }
   }
 
@@ -184,6 +193,7 @@ export class TaskService {
     }
     const nextStatus =
       task.status === "running" ? "cancel_requested" : "cancelled";
+    this.active.get(taskId)?.abort();
     return response(
       await this.store.commit(
         {

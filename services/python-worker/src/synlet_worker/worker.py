@@ -102,8 +102,8 @@ def _route(text):
     }
     result = _julia_engine().predict(
         state=(
-            "Text-only user request. No image or screenshot is attached. "
-            f"Requested goal: {payload['goal']}"
+            ("Images are attached. " if payload.get("hasImages") else "No image is currently attached; tools may provide images later. ")
+            + f"Requested goal: {payload['goal']}"
         ),
         questions=questions,
     )
@@ -125,14 +125,28 @@ def _route(text):
 
 
 def _embed_batch(inputs):
-    vectors = _embedding_engine().encode(
-        inputs,
-        batch_size=16,
-        show_progress_bar=False,
-        convert_to_numpy=True,
-        normalize_embeddings=True,
-    )
-    return [json.dumps(vector.tolist()) for vector in vectors]
+    engine = _embedding_engine()
+    outputs = []
+    for value in inputs:
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError:
+            parsed = {"text": value, "kind": "document"}
+        if not isinstance(parsed, dict) or not isinstance(parsed.get("text"), str):
+            raise ValueError("embedding input must contain text")
+        kind = parsed.get("kind", "document")
+        if kind not in {"query", "document"}:
+            raise ValueError("unknown embedding purpose")
+        method = getattr(engine, "encode_query" if kind == "query" else "encode_document", None)
+        if method is None:
+            raise RuntimeError("Pinned SentenceTransformers must support query/document encoding")
+        # Reject rather than silently truncate an embedding input. The native method adds the appropriate prompt.
+        prompt = engine.prompts.get(kind, "")
+        if len(engine.tokenizer.encode(prompt + parsed["text"], add_special_tokens=True)) > engine.max_seq_length:
+            raise ValueError("embedding input exceeds native token window; split it into smaller chunks")
+        vector = method([parsed["text"]], show_progress_bar=False, convert_to_numpy=True, normalize_embeddings=True)[0]
+        outputs.append(json.dumps(vector.tolist()))
+    return outputs
 
 
 def handle(value):

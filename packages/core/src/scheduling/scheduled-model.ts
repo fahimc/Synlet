@@ -19,8 +19,15 @@ export class ScheduledModelPort implements ModelPort {
     return this.inner.capabilities(modelId);
   }
 
-  countInput(modelId: string, prompt: string): Promise<number> {
-    return this.inner.countInput(modelId, prompt);
+  async countInput(modelId: string, prompt: string): Promise<number> {
+    return this.countRequest({ requestId: "count", modelId, prompt, maxOutputTokens: -1, deadlineUtc: new Date(Date.now()+30000).toISOString(), allowedTools: [] }, AbortSignal.timeout(30000));
+  }
+  async countRequest(request: ModelRequest, signal: AbortSignal): Promise<number> {
+    const memoryMiB = this.memoryByModel.get(request.modelId);
+    if (!memoryMiB) throw new DomainError("CAPABILITY_UNAVAILABLE", "No admission profile");
+    const lease = await this.scheduler.acquire({ taskId: request.requestId, modelId: request.modelId, memoryMiB, deadlineUtc: request.deadlineUtc }, signal);
+    try { return this.inner.countRequest ? await this.inner.countRequest(request, signal) : await this.inner.countInput(request.modelId, request.prompt); }
+    finally { this.scheduler.release(lease); }
   }
 
   async *generate(

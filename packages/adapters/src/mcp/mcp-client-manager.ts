@@ -51,7 +51,8 @@ export class McpClientManager {
     return definitions;
   }
 
-  async execute(toolId: string, arguments_: Json): Promise<Json> {
+  async execute(toolId: string, arguments_: Json, signal?: AbortSignal): Promise<Json> {
+    signal?.throwIfAborted();
     const match = /^mcp\.([^.]+)\.(.+)$/u.exec(toolId);
     if (!match)
       throw new DomainError("POLICY_DENIED", `Invalid MCP tool id: ${toolId}`);
@@ -63,11 +64,21 @@ export class McpClientManager {
       arguments_ && typeof arguments_ === "object" && !Array.isArray(arguments_)
         ? (arguments_ as Record<string, unknown>)
         : {};
-    const result = await connection.client.callTool({
-      name: toolName,
-      arguments: argumentsObject,
-    });
-    return json(result);
+    let stopping: Promise<void> | undefined;
+    const abort = () => {
+      stopping = connection.client.close();
+      this.connections.delete(serverName);
+    };
+    signal?.addEventListener("abort", abort, { once: true });
+    try {
+      if (signal?.aborted) { abort(); signal.throwIfAborted(); }
+      const result = await connection.client.callTool({ name: toolName, arguments: argumentsObject });
+      signal?.throwIfAborted();
+      return json(result);
+    } catch (error) {
+      if (signal?.aborted) throw new DomainError("OUTCOME_UNKNOWN", "MCP transport stopped; remote side effects must be reconciled, not replayed");
+      throw error;
+    } finally { signal?.removeEventListener("abort", abort); await stopping; }
   }
 
   async close(): Promise<void> {

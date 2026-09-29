@@ -20,6 +20,7 @@ test("local console serves its controls and completes the acceptance journey", a
   const app = await createServer({
     profile: testProfile,
     authToken: "test-token",
+    principal: { actorId: "actor-a", projectIds: ["project-a"] },
     services: testServices({
       databasePath: join(root, "synlet.sqlite"),
       dataRoot: join(root, "data"),

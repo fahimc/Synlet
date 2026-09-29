@@ -98,7 +98,7 @@ export async function startLocalModelServer(
       "--models-preset",
       resolve("config/models.router.ini"),
       "--models-max",
-      "2",
+      "1",
       "--parallel",
       "1",
       "--api-key",

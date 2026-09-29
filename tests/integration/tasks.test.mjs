@@ -21,6 +21,7 @@ async function temporaryServer() {
   const app = await createServer({
     profile: testProfile,
     authToken: "test-token",
+    principal: { actorId: "actor-a", projectIds: ["project-a"] },
     services: testServices({
       databasePath,
       dataRoot: join(root, "data"),
@@ -108,6 +109,7 @@ test("committed state survives restart", async (context) => {
   const restarted = await createServer({
     profile: testProfile,
     authToken: "test-token",
+    principal: { actorId: "actor-a", projectIds: ["project-a"] },
     services: testServices({
       databasePath,
       dataRoot: join(root, "data"),

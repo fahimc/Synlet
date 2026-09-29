@@ -4,11 +4,15 @@
 
 Synlet is a proposed local AI assistant powered by **SOMA — Specialist Orchestration and Memory Architecture**. SOMA coordinates small specialist models through adaptive routing, source-preserving indexed memory and verified tool execution behind one conversational interface.
 
-> **Status: working local multi-model system.** Synlet runs the architecture-selected
+> **Status: full-control SOMA harness; review remediation requires the recorded CI and local-model validation gates.** Synlet runs the architecture-selected
 > Julia-1 router on CPU; MiniCPM5 controller, Nanbeige math specialist, LFM vision
 > specialist and Qwen3.5 compactor through a pinned llama.cpp CUDA router; and
 > EmbeddingGemma on CPU. Model and runtime files are SHA-256 locked, inference and
 > retrieval are measured, and no cloud model or OpenAI account is required.
+
+## Full-control operating contract
+
+See [the full-control ADR](docs/adr/0011-full-control-shared-harness.md), [remote administration runbook](docs/runbooks/full-control-remote-admin.md), and [review remediation record](docs/progress/REVIEW_REMEDIATION.md). The LLM chooses arbitrary shell commands; there are no task-specific execution routes or command allowlists. Launch-user OS permissions still apply. Keep remote authentication enabled.
 
 ## Current runnable system
 
@@ -37,7 +41,7 @@ pnpm test:release
 pnpm dev
 ```
 
-Open <http://127.0.0.1:43127/> after startup. The launcher verifies every enabled
+Open <http://127.0.0.1:43127/> after startup and sign in with the private token in `runtime-data/operator-auth.json` (or your `SYNLET_AUTH_TOKEN`). The old static bearer is not used. The launcher verifies every enabled
 runtime/model hash, starts the authenticated loopback-only multi-model llama.cpp router, waits
 for model readiness, and then starts the Synlet gateway. Local state is stored under
 `runtime-data/`. Stop with Ctrl+C. The optional T10 worker pool remains untriggered
@@ -62,13 +66,13 @@ until measurements justify it.
 - The agent pipeline is Julia classification, Qwen3.5-0.8B skill selection, then the
   MiniCPM controller loop. Reasoning is disabled for Julia, the Qwen selection and
   Qwen compaction; it is enabled for MiniCPM and configured per specialist. Generation
-  has a task deadline but no arbitrary response-token ceiling.
+  has one persisted task deadline and a token allowance derived from the remaining physical context, not an arbitrary answer-length ceiling.
 - Every model trace node displays its exact model ID/version. Failed tools or rejected
   answers create a root-level recovery route that sends the original goal plus failure
   context back through Julia and Qwen before planning resumes. Julia capability labels
-  constrain which specialists MiniCPM may call; the disabled K2 role uses MiniCPM as
+  advise rather than constrain which enabled specialists MiniCPM may call; the disabled K2 role uses MiniCPM as
   the bounded code-specialist fallback instead of exposing an unrelated specialist.
-- Agent runs are asynchronous and durable. `POST /api/v1/agent-runs` starts a run;
+- Agent runs have persisted checkpoints; safe model work can resume, while interrupted tool outcomes require reconciliation rather than blind replay. `POST /api/v1/agent-runs` starts a run;
   `GET /api/v1/agent-runs` lists access-scoped session history, and the run plus its
   append-only graph are available from `/api/v1/agent-runs/:id` and
   `/api/v1/agent-runs/:id/events`. The UI restores the latest conversation after a

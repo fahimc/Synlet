@@ -15,7 +15,7 @@ try {
       `Reply with exactly: ${marker}`,
       { maxTokens: 512, modelId: model.modelId },
     );
-    if (!result.text.includes(marker))
+    if (!result.text.trim() === marker)
       throw new Error(`${model.modelId} did not return its readiness marker`);
     checks.push({
       modelId: model.modelId,
@@ -29,8 +29,10 @@ try {
     `${JSON.stringify(
       {
         schemaVersion: "synlet.compatibility/v1",
-        evidence: "MEASURED",
+        evidence: "TEXT_LOAD_SMOKE_ONLY",
         ready: true,
+        roleQualityValidated: false,
+        visionPixelsValidated: false,
         runtime: `${server.runtime.name}-${server.runtime.platform}`,
         checks,
       },

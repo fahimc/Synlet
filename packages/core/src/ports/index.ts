@@ -1,5 +1,7 @@
 import type {
   AccessContext,
+  ChatMessage,
+  ImageInput,
   Json,
   RetrievedChunk,
   SourceRef,
@@ -158,6 +160,7 @@ export interface AgentCapabilityRouterPort {
       readonly requestId: string;
       readonly taskId: string;
       readonly goal: string;
+      readonly hasImages?: boolean;
       readonly deadlineUtc: string;
     },
     signal: AbortSignal,
@@ -168,6 +171,7 @@ export interface AgentCapabilityRouterPort {
 export interface EmbeddingPort {
   embed(
     request: {
+      readonly purpose?: "query" | "document";
       readonly requestId: string;
       readonly taskId: string;
       readonly inputs: readonly string[];
@@ -314,7 +318,8 @@ export interface ArtifactPort {
 }
 
 export interface TokenizerPort {
-  count(text: string): number;
+  countMessages?(messages: readonly { readonly role: "system" | "user"; readonly content: string }[]): number | Promise<number>;
+  count(text: string): number | Promise<number>;
 }
 
 export interface CompactorPort {
@@ -358,6 +363,9 @@ export type ModelEvent =
   | { readonly type: "error"; readonly code: string; readonly message: string };
 
 export interface ModelRequest {
+  readonly taskId?: string;
+  readonly messages?: readonly ChatMessage[];
+  readonly images?: readonly ImageInput[];
   readonly requestId: string;
   readonly modelId: string;
   readonly prompt: string;
@@ -370,6 +378,7 @@ export interface ModelRequest {
 }
 
 export interface ModelPort {
+  countRequest?(request: ModelRequest, signal: AbortSignal): Promise<number>;
   capabilities(modelId: string): Promise<ModelCapabilities>;
   countInput(modelId: string, prompt: string): Promise<number>;
   generate(

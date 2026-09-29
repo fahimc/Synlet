@@ -1,37 +1,16 @@
-import { execFile } from "node:child_process";
-import { resolve } from "node:path";
-
-import {
-  DomainError,
-  type AgentToolDefinition,
-  type AgentToolPort,
-  type Json,
-} from "@synlet/core";
-
+import Ajv from "ajv";
+import { DomainError, type AgentToolDefinition, type AgentToolPort, type Json } from "@synlet/core";
 import type { PlaywrightBrowserAdapter } from "../browser/playwright-browser.js";
 import type { McpClientManager } from "../mcp/mcp-client-manager.js";
 import type { SafeToolAdapter } from "./safe-tools.js";
-
-function objectArguments(value: Json): Record<string, Json> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new DomainError("INVALID_OUTPUT", "Tool arguments must be an object");
-  }
-  return value as Record<string, Json>;
-}
-
-function textArgument(value: Record<string, Json>, key: string): string {
-  const found = value[key];
-  if (typeof found !== "string")
-    throw new DomainError("INVALID_OUTPUT", `${key} must be a string`);
-  return found;
-}
-
+import { FullControlFiles } from "./full-control-files.js";
+import { runHostCommand } from "./host-command.js";
 const hostTools: readonly AgentToolDefinition[] = [
   {
     id: "file.read",
-    title: "Read workspace file",
+    title: "Read host file",
     description:
-      "Read a UTF-8 file in the configured workspace and return its revision hash.",
+      "Read a UTF-8 file at any launch-user-accessible path and return its revision hash.",
     inputSchema: {
       type: "object",
       properties: { path: { type: "string" } },
@@ -41,9 +20,9 @@ const hostTools: readonly AgentToolDefinition[] = [
   },
   {
     id: "file.patch",
-    title: "Write workspace file",
+    title: "Write host file",
     description:
-      "Atomically replace a UTF-8 workspace file when expectedSha256 matches.",
+      "Atomically replace a UTF-8 host file when expectedSha256 matches.",
     inputSchema: {
       type: "object",
       properties: {
@@ -77,6 +56,7 @@ const hostTools: readonly AgentToolDefinition[] = [
         command: { type: "string" },
         cwd: { type: "string" },
         timeoutMs: { type: "number" },
+        shell: { enum: ["powershell", "cmd", "posix"] },
       },
       required: ["command"],
     },
@@ -141,165 +121,37 @@ const hostTools: readonly AgentToolDefinition[] = [
   },
 ];
 
+
+const additional: readonly AgentToolDefinition[] = [
+ { id: "file.write", title: "Write any host file", description: "Create or replace a launch-user-accessible file, including absolute paths outside the workspace. This is intentionally unrestricted.", inputSchema: { type: "object", properties: { path: { type: "string" }, content: { type: "string" } }, required: ["path","content"], additionalProperties:false }, source:"host" },
+ { id: "file.delete", title: "Delete host path", description: "Delete a file or directory accessible to the launch user. recursive/force are explicit arguments. No workspace boundary.", inputSchema: { type:"object", properties:{path:{type:"string"},recursive:{type:"boolean"},force:{type:"boolean"}}, required:["path"],additionalProperties:false },source:"host" },
+ { id: "image.open", title: "Read image from host", description: "Read an image at any accessible path and provide its real pixels to the vision specialist.",inputSchema:{type:"object",properties:{path:{type:"string"}},required:["path"],additionalProperties:false},source:"host"},
+ { id:"browser.screenshot",title:"Capture browser image",description:"Capture actual pixels of the dedicated browser; returns an image reference for vision.",inputSchema:{type:"object",properties:{url:{type:"string"}},required:["url"],additionalProperties:false},source:"browser"}
+];
 export class AgentToolRouter implements AgentToolPort {
-  constructor(
-    private readonly safeTools: SafeToolAdapter,
-    private readonly browser: PlaywrightBrowserAdapter,
-    private readonly mcp: McpClientManager,
-    private readonly defaultCwd: string,
-  ) {}
-
-  async catalog(): Promise<readonly AgentToolDefinition[]> {
-    return [...hostTools, ...(await this.mcp.catalog())];
+  private readonly files: FullControlFiles;
+  private readonly validator = new Ajv({ strict: false, allErrors: true, validateFormats: false });
+  constructor(private readonly safeTools: SafeToolAdapter, private readonly browser: PlaywrightBrowserAdapter, private readonly mcp: McpClientManager, private readonly defaultCwd: string) { this.files = new FullControlFiles(defaultCwd); }
+  async catalog(): Promise<readonly AgentToolDefinition[]> { return [...hostTools, ...additional, ...await this.mcp.catalog()]; }
+  async execute(toolId: string, arguments_: Json, signal?: AbortSignal): Promise<Json> {
+    signal?.throwIfAborted();
+    const definition = (await this.catalog()).find(tool => tool.id === toolId);
+    if (!definition) throw new DomainError("INVALID_OUTPUT", `Unknown tool: ${toolId}`);
+    const valid = this.validator.compile(definition.inputSchema as object);
+    if (!valid(arguments_)) throw new DomainError("INVALID_OUTPUT", `Tool arguments violate schema: ${this.validator.errorsText(valid.errors)}`);
+    if (!arguments_ || typeof arguments_ !== "object" || Array.isArray(arguments_)) throw new DomainError("INVALID_OUTPUT", "Tool arguments must be an object");
+    const args = arguments_ as Record<string, Json>;
+    const text = (key: string) => { const value=args[key]; if(typeof value!=="string")throw new DomainError("INVALID_OUTPUT", `${key} must be a string`); return value; };
+    if (toolId.startsWith("file.") || toolId === "image.open") return this.files.execute(toolId, args, signal);
+    if (toolId === "calculator") return this.safeTools.execute(toolId,args);
+    if (toolId === "command.run") return runHostCommand(args,this.defaultCwd,signal);
+    if (toolId === "browser.search") return this.browser.search(text("query"),signal);
+    if (toolId === "browser.inspect") return this.browser.inspect(text("url"),signal);
+    if (toolId === "browser.screenshot") return this.browser.screenshot(text("url"),signal);
+    if (toolId === "browser.click") return this.browser.clickAndObserve(text("url"), text("role") as "button"|"link",text("name"),signal);
+    if (toolId === "browser.type") return this.browser.typeAndObserve(text("url"),text("label"),text("value"),args.submit===true,signal);
+    if (toolId.startsWith("mcp.")) return this.mcp.execute(toolId,args,signal);
+    throw new DomainError("INVALID_OUTPUT", "Tool has no adapter");
   }
-
-  async execute(
-    toolId: string,
-    arguments_: Json,
-    signal?: AbortSignal,
-  ): Promise<Json> {
-    if (
-      toolId === "file.read" ||
-      toolId === "file.patch" ||
-      toolId === "calculator"
-    ) {
-      return this.safeTools.execute(toolId, arguments_);
-    }
-    const args = objectArguments(arguments_);
-    if (toolId === "command.run") return this.command(args, signal);
-    if (toolId === "browser.search")
-      return this.browser.search(textArgument(args, "query"));
-    if (toolId === "browser.inspect")
-      return this.browser.inspect(textArgument(args, "url"));
-    if (toolId === "browser.click") {
-      const role = textArgument(args, "role");
-      if (role !== "button" && role !== "link")
-        throw new DomainError("INVALID_OUTPUT", "role must be button or link");
-      return this.browser.clickAndObserve(
-        textArgument(args, "url"),
-        role,
-        textArgument(args, "name"),
-      );
-    }
-    if (toolId === "browser.type") {
-      return this.browser.typeAndObserve(
-        textArgument(args, "url"),
-        textArgument(args, "label"),
-        textArgument(args, "value"),
-        args.submit === true,
-      );
-    }
-    if (toolId.startsWith("mcp.")) return this.mcp.execute(toolId, arguments_);
-    throw new DomainError("POLICY_DENIED", `Unsupported agent tool: ${toolId}`);
-  }
-
-  async close(): Promise<void> {
-    await this.mcp.close();
-  }
-
-  private command(
-    args: Record<string, Json>,
-    signal?: AbortSignal,
-  ): Promise<Json> {
-    const command = textArgument(args, "command");
-    if (command.length > 16_384)
-      throw new DomainError("RESOURCE_EXHAUSTED", "Command is too long");
-    const cwdValue = args.cwd;
-    const cwd =
-      typeof cwdValue === "string" ? resolve(cwdValue) : this.defaultCwd;
-    const requestedTimeout =
-      typeof args.timeoutMs === "number" ? args.timeoutMs : 120_000;
-    const timeout = Math.max(1_000, Math.min(600_000, requestedTimeout));
-    const executable =
-      process.platform === "win32" ? "powershell.exe" : "/bin/sh";
-    const commandArgs =
-      process.platform === "win32"
-        ? ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", command]
-        : ["-lc", command];
-    return new Promise((resolvePromise, reject) => {
-      execFile(
-        executable,
-        commandArgs,
-        { cwd, timeout, maxBuffer: 1024 * 1024, windowsHide: true, signal },
-        (error, stdout, stderr) => {
-          if (error && typeof error.code !== "number") {
-            reject(
-              new DomainError(
-                "INVALID_OUTPUT",
-                `Command failed: ${error.message}\n${stderr}`.slice(0, 16_384),
-              ),
-            );
-            return;
-          }
-          const diagnostic = shellDiagnostic(stderr);
-          const complete = (installedSyntax?: string) => {
-            resolvePromise({
-              ok: !error && !diagnostic,
-              platform: process.platform,
-              shell: process.platform === "win32" ? "powershell" : "/bin/sh",
-              command,
-              cwd,
-              exitCode:
-                error && typeof error.code === "number" ? error.code : 0,
-              stdout: stdout.slice(0, 65_536),
-              stderr: stderr.slice(0, 65_536),
-              ...(diagnostic ? { diagnostic } : {}),
-              ...(installedSyntax ? { installedSyntax } : {}),
-            });
-          };
-          const commandName = powerShellCommandName(command);
-          if (
-            error &&
-            diagnostic &&
-            process.platform === "win32" &&
-            commandName
-          ) {
-            execFile(
-              executable,
-              [
-                "-NoLogo",
-                "-NoProfile",
-                "-NonInteractive",
-                "-Command",
-                `Get-Command -Name ${commandName} -Syntax`,
-              ],
-              {
-                cwd,
-                timeout: 10_000,
-                maxBuffer: 64 * 1024,
-                windowsHide: true,
-                signal,
-              },
-              (syntaxError, syntaxStdout) => {
-                complete(syntaxError ? undefined : syntaxStdout.slice(0, 8192));
-              },
-            );
-            return;
-          }
-          complete();
-        },
-      );
-    });
-  }
-}
-
-function shellDiagnostic(stderr: string): string | undefined {
-  if (/parameter (?:cannot be found|name)/iu.test(stderr)) {
-    return "The shell is available but the command syntax is invalid. Inspect the installed command with Get-Command -Syntax or Get-Help before retrying with different parameters.";
-  }
-  if (
-    /is not recognized as the name of a cmdlet|CommandNotFoundException/iu.test(
-      stderr,
-    )
-  ) {
-    return "The requested command is unavailable in this shell. Use Get-Command/Get-Help or choose another installed method.";
-  }
-  if (stderr.trim()) {
-    return "The shell ran the command but its arguments, target, provider, or requested resource failed. Inspect the installed command syntax/help and enumerate available targets before retrying.";
-  }
-  return undefined;
-}
-
-function powerShellCommandName(command: string): string | undefined {
-  return /^\s*([A-Za-z]+-[A-Za-z][A-Za-z0-9-]*)\b/u.exec(command)?.[1];
+  async close(): Promise<void> { await this.browser.close(); await this.mcp.close(); }
 }

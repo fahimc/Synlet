@@ -9,3 +9,7 @@ export * from "./scheduling/local-gpu-scheduler.js";
 export * from "./scheduling/scheduled-model.js";
 export * from "./context/source-service.js";
 export * from "./context/context-engine.js";
+
+export * from "./orchestration/agent-session.js";
+export * from "./orchestration/model-output.js";
+export * from "./context/agent-context.js";

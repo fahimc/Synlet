@@ -12,6 +12,7 @@ test("chat facade accepts its narrow contract and rejects unsupported options", 
   const app = await createServer({
     profile: testProfile,
     authToken: "test-token",
+    principal: { actorId: "actor-a", projectIds: ["project-a"] },
     services: testServices({ databasePath: ":memory:" }),
   });
   context.after(async () => app.close());
@@ -26,7 +27,8 @@ test("chat facade accepts its narrow contract and rejects unsupported options", 
     },
   });
   assert.equal(accepted.statusCode, 200);
-  assert.equal(accepted.json().evidence, "MEASURED");
+  assert.equal(accepted.json().execution_mode, "full-control");
+  assert.match(accepted.json().id, /^run_/u);
   assert.match(accepted.json().choices[0].message.content, /^TEST:/u);
   const rejected = await app.inject({
     method: "POST",

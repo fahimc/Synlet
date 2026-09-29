@@ -52,7 +52,7 @@ export class SourcePreservingCompactor implements CompactorPort {
     let used = 0;
     for (const chunk of chunks) {
       const text = `[${chunk.ref.chunkId}] ${chunk.text}`;
-      const tokens = this.tokenizer.count(text);
+      const tokens = await this.tokenizer.count(text);
       if (used + tokens > maxTokens) break;
       parts.push(text);
       used += tokens;

@@ -1,5 +1,20 @@
 # Synlet — Codex build brief
 
+## Current execution requirement — full-control SOMA
+
+The authenticated owner has explicitly requested unrestricted remote PC administration.
+The LLM may run any terminal command, write/edit/delete any launch-user-accessible file,
+restart services and write code. Do not add command allowlists, predefined
+intent-to-command routes, keyword execution handlers, or a workspace-only sandbox to
+the default full-control agent. Julia and skills are advisory, never execution
+permissions. Keep strong operator authentication, complete-output validation, native
+context bounds, evidence provenance and no-blind-replay recovery. These are reliability
+boundaries, not command restrictions. See docs/adr/0011-full-control-shared-harness.md
+and docs/runbooks/full-control-remote-admin.md; this requirement supersedes conflicting
+restrictive defaults in the original planning documents. OS privileges and native model
+behavior remain unchanged. Never claim a test-double pass is a model-quality benchmark.
+
+
 Blueprint v0.2 · 28 September 2026 · DESIGN / NOT IMPLEMENTED
 
 ## Product goal

@@ -22,6 +22,7 @@ test("sources preserve revision provenance, lookup scope, expansion, and deletio
   const app = await createServer({
     profile: testProfile,
     authToken: "test-token",
+    principal: { actorId: "actor-a", projectIds: ["project-a"] },
     services: testServices({
       databasePath: join(root, "synlet.sqlite"),
       dataRoot: join(root, "data"),
@@ -80,7 +81,7 @@ test("sources preserve revision provenance, lookup scope, expansion, and deletio
     url: `/api/v1/sources/${source.sourceId}`,
     headers: authHeaders("project-b"),
   });
-  assert.equal(crossProject.statusCode, 404);
+  assert.equal(crossProject.statusCode, 403);
 
   const deleted = await app.inject({
     method: "DELETE",
@@ -115,6 +116,7 @@ test("source request size is capped before persistence", async (context) => {
   const app = await createServer({
     profile: smallProfile,
     authToken: "test-token",
+    principal: { actorId: "actor-a", projectIds: ["project-a"] },
     services: testServices({
       databasePath: ":memory:",
       dataRoot: join(root, "data"),

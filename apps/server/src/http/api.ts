@@ -1,3 +1,6 @@
+import { timingSafeEqual } from "node:crypto";
+import type { OperatorPrincipal } from "../bootstrap/operator-auth.js";
+import { installAgentApi } from "./agent-api.js";
 import type {
   ActionProposalRequest,
   ApprovalDecisionRequest,
@@ -28,28 +31,25 @@ function accessFor(
   request: FastifyRequest,
   reply: FastifyReply,
   authToken: string,
+  principal: OperatorPrincipal,
 ): AccessContext | undefined {
-  if (request.headers.authorization !== `Bearer ${authToken}`) {
+  const supplied = Buffer.from(request.headers.authorization ?? "");
+  const expected = Buffer.from(`Bearer ${authToken}`);
+  if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) {
     void reply
       .code(401)
       .send({ code: "UNAUTHENTICATED", message: "Bearer token required" });
     return undefined;
   }
-  const actorId = request.headers["x-synlet-actor-id"];
-  const projectId = request.headers["x-synlet-project-id"];
-  if (
-    typeof actorId !== "string" ||
-    typeof projectId !== "string" ||
-    !/^[a-zA-Z0-9_-]{1,128}$/u.test(actorId) ||
-    !/^[a-zA-Z0-9_-]{1,128}$/u.test(projectId)
-  ) {
-    void reply.code(400).send({
-      code: "INVALID_ACCESS_CONTEXT",
-      message: "Valid actor and project headers are required",
-    });
+  const requestedActor = request.headers["x-synlet-actor-id"];
+  const requestedProject = request.headers["x-synlet-project-id"];
+  if ((requestedActor !== undefined && requestedActor !== principal.actorId) || (requestedProject !== undefined && (typeof requestedProject !== "string" || !principal.projectIds.includes(requestedProject)))) {
+    void reply.code(403).send({ code: "POLICY_DENIED", message: "Caller headers cannot change the authenticated operator scope" });
     return undefined;
   }
-  return { actorId, projectId, policyVersion: "policy/v1" };
+  const projectId = typeof requestedProject === "string" ? requestedProject : principal.projectIds[0];
+  if (!projectId) { void reply.code(403).send({code:"POLICY_DENIED",message:"Operator has no configured project"});return undefined; }
+  return { actorId: principal.actorId, projectId, policyVersion: "full-control/v1" };
 }
 
 function statusFor(error: DomainError): number {
@@ -93,35 +93,11 @@ export function installApi(
   app: FastifyInstance,
   services: ServerServices,
   authToken: string,
+  principal: OperatorPrincipal,
 ): void {
-  app.post("/api/v1/agent-runs", async (request, reply) => {
-    const access = accessFor(request, reply, authToken);
-    if (!access) return;
-    const body = request.body as { sessionId?: unknown; prompt?: unknown };
-    if (
-      typeof body.sessionId !== "string" ||
-      body.sessionId.length < 1 ||
-      body.sessionId.length > 128 ||
-      typeof body.prompt !== "string" ||
-      body.prompt.trim().length < 1 ||
-      body.prompt.length > 32_768
-    ) {
-      return reply.code(400).send({
-        code: "INVALID_REQUEST",
-        message: "sessionId and prompt are required",
-      });
-    }
-    return reply
-      .code(202)
-      .send(
-        await services.agent.start(
-          { sessionId: body.sessionId, prompt: body.prompt },
-          access,
-        ),
-      );
-  });
+  installAgentApi(app, services, (request, reply) => accessFor(request, reply, authToken, principal));
   app.get("/api/v1/agent-runs", async (request, reply) => {
-    const access = accessFor(request, reply, authToken);
+    const access = accessFor(request, reply, authToken, principal);
     if (!access) return;
     const query = request.query as { sessionId?: unknown; limit?: unknown };
     const sessionId = query.sessionId;
@@ -146,12 +122,12 @@ export function installApi(
     });
   });
   app.get("/api/v1/agent-runs/:id", async (request, reply) => {
-    const access = accessFor(request, reply, authToken);
+    const access = accessFor(request, reply, authToken, principal);
     if (!access) return;
     return services.agent.get((request.params as { id: string }).id, access);
   });
   app.get("/api/v1/agent-runs/:id/events", async (request, reply) => {
-    const access = accessFor(request, reply, authToken);
+    const access = accessFor(request, reply, authToken, principal);
     if (!access) return;
     const after = Number((request.query as { after?: string }).after ?? 0);
     if (!Number.isSafeInteger(after) || after < 0) {
@@ -167,12 +143,12 @@ export function installApi(
     );
   });
   app.post("/api/v1/agent-runs/:id/cancel", async (request, reply) => {
-    const access = accessFor(request, reply, authToken);
+    const access = accessFor(request, reply, authToken, principal);
     if (!access) return;
     return services.agent.cancel((request.params as { id: string }).id, access);
   });
   app.get("/api/v1/agent-tools", async (request, reply) => {
-    const access = accessFor(request, reply, authToken);
+    const access = accessFor(request, reply, authToken, principal);
     if (!access) return;
     return services.agentTools.catalog();
   });
@@ -180,7 +156,7 @@ export function installApi(
     "/api/v1/tasks",
     { schema: { body: requestSchema(taskCreateRequestSchema) } },
     async (request, reply) => {
-      const access = accessFor(request, reply, authToken);
+      const access = accessFor(request, reply, authToken, principal);
       if (!access) return;
       const key = request.headers["idempotency-key"];
       if (typeof key !== "string" || key.length < 1 || key.length > 256) {
@@ -196,86 +172,13 @@ export function installApi(
       );
     },
   );
-  app.post("/v1/chat/completions", async (request, reply) => {
-    const access = accessFor(request, reply, authToken);
-    if (!access) return;
-    const body = request.body as {
-      model?: unknown;
-      messages?: unknown;
-      stream?: unknown;
-      tools?: unknown;
-    };
-    if (
-      body.model !== "synlet-local" ||
-      body.stream === true ||
-      body.tools !== undefined
-    ) {
-      return reply.code(400).send({
-        code: "UNSUPPORTED_OPTION",
-        message:
-          "The facade supports model=synlet-local, non-streaming text messages, and no tools",
-      });
-    }
-    if (
-      !Array.isArray(body.messages) ||
-      body.messages.length < 1 ||
-      body.messages.length > 64
-    ) {
-      return reply
-        .code(400)
-        .send({ code: "INVALID_REQUEST", message: "messages are required" });
-    }
-    const content: string[] = [];
-    for (const item of body.messages as unknown[]) {
-      if (
-        typeof item !== "object" ||
-        item === null ||
-        !("content" in item) ||
-        typeof item.content !== "string"
-      ) {
-        return reply.code(400).send({
-          code: "INVALID_REQUEST",
-          message: "only text message content is supported",
-        });
-      }
-      content.push(item.content);
-    }
-    const key = request.headers["idempotency-key"];
-    if (typeof key !== "string") {
-      return reply
-        .code(400)
-        .send({ code: "INVALID_REQUEST", message: "Idempotency-Key required" });
-    }
-    const task = await services.tasks.create(
-      {
-        sessionId: "openai-facade",
-        prompt: content.join("\n"),
-        execution: "immediate",
-      },
-      key,
-      access,
-    );
-    return {
-      id: task.taskId,
-      object: "chat.completion",
-      model: "synlet-local",
-      evidence: "MEASURED",
-      choices: [
-        {
-          index: 0,
-          finish_reason: "stop",
-          message: { role: "assistant", content: task.result ?? "" },
-        },
-      ],
-    };
-  });
   app.get("/api/v1/tasks/:id", async (request, reply) => {
-    const access = accessFor(request, reply, authToken);
+    const access = accessFor(request, reply, authToken, principal);
     if (!access) return;
     return services.tasks.get((request.params as { id: string }).id, access);
   });
   app.get("/api/v1/tasks/:id/events", async (request, reply) => {
-    const access = accessFor(request, reply, authToken);
+    const access = accessFor(request, reply, authToken, principal);
     if (!access) return;
     const after = Number((request.query as { after?: string }).after ?? 0);
     if (!Number.isSafeInteger(after) || after < 0) {
@@ -301,7 +204,7 @@ export function installApi(
       );
   });
   app.post("/api/v1/tasks/:id/cancel", async (request, reply) => {
-    const access = accessFor(request, reply, authToken);
+    const access = accessFor(request, reply, authToken, principal);
     if (!access) return;
     return services.tasks.cancel((request.params as { id: string }).id, access);
   });
@@ -309,7 +212,7 @@ export function installApi(
     "/api/v1/tasks/:id/actions",
     { schema: { body: requestSchema(actionProposalRequestSchema) } },
     async (request, reply) => {
-      const access = accessFor(request, reply, authToken);
+      const access = accessFor(request, reply, authToken, principal);
       if (!access) return;
       const body = request.body as ActionProposalRequest;
       return services.tools.propose(
@@ -321,12 +224,12 @@ export function installApi(
     },
   );
   app.get("/api/v1/approvals", async (request, reply) => {
-    const access = accessFor(request, reply, authToken);
+    const access = accessFor(request, reply, authToken, principal);
     if (!access) return;
     return services.tools.listPending(access);
   });
   app.get("/api/v1/models", async (request, reply) => {
-    const access = accessFor(request, reply, authToken);
+    const access = accessFor(request, reply, authToken, principal);
     if (!access) return;
     return services.models.list().map((model) => ({
       modelId: model.modelId,
@@ -334,12 +237,12 @@ export function installApi(
       provider: model.provider,
       enabled: model.enabled,
       capabilities: model.capabilities,
-      evidence: model.enabled ? "MEASURED" : "UNAVAILABLE",
+      evidence: model.enabled ? "CONFIGURED_NOT_ROLE_VALIDATED" : "UNAVAILABLE",
       ...(model.reason ? { reason: model.reason } : {}),
     }));
   });
   app.get("/api/v1/skills", async (request, reply) => {
-    const access = accessFor(request, reply, authToken);
+    const access = accessFor(request, reply, authToken, principal);
     if (!access) return;
     const availableTools = new Set(
       (await services.agentTools.catalog()).map((tool) => tool.id),
@@ -357,7 +260,7 @@ export function installApi(
     "/api/v1/approvals/:id/decision",
     { schema: { body: requestSchema(approvalDecisionRequestSchema) } },
     async (request, reply) => {
-      const access = accessFor(request, reply, authToken);
+      const access = accessFor(request, reply, authToken, principal);
       if (!access) return;
       return services.tools.decide(
         (request.params as { id: string }).id,
@@ -370,7 +273,7 @@ export function installApi(
     "/api/v1/sources",
     { schema: { body: requestSchema(sourceCreateRequestSchema) } },
     async (request, reply) => {
-      const access = accessFor(request, reply, authToken);
+      const access = accessFor(request, reply, authToken, principal);
       if (!access) return;
       return services.sources.ingest(
         request.body as SourceCreateRequest,
@@ -379,12 +282,12 @@ export function installApi(
     },
   );
   app.get("/api/v1/sources/:id", async (request, reply) => {
-    const access = accessFor(request, reply, authToken);
+    const access = accessFor(request, reply, authToken, principal);
     if (!access) return;
     return services.sources.get((request.params as { id: string }).id, access);
   });
   app.delete("/api/v1/sources/:id", async (request, reply) => {
-    const access = accessFor(request, reply, authToken);
+    const access = accessFor(request, reply, authToken, principal);
     if (!access) return;
     return services.sources.delete(
       (request.params as { id: string }).id,
@@ -392,7 +295,7 @@ export function installApi(
     );
   });
   app.post("/api/v1/context/search", async (request, reply) => {
-    const access = accessFor(request, reply, authToken);
+    const access = accessFor(request, reply, authToken, principal);
     if (!access) return;
     const body = request.body as { query?: unknown; exact?: unknown };
     if (
@@ -409,7 +312,7 @@ export function installApi(
       : services.sources.search(body.query, access);
   });
   app.get("/api/v1/sources/:id/chunks/:chunkId", async (request, reply) => {
-    const access = accessFor(request, reply, authToken);
+    const access = accessFor(request, reply, authToken, principal);
     if (!access) return;
     const parameters = request.params as { id: string; chunkId: string };
     const query = request.query as { revision?: string; radius?: string };
@@ -437,7 +340,7 @@ export function installApi(
     "/api/v1/context/build",
     { schema: { body: requestSchema(contextBuildRequestSchema) } },
     async (request, reply) => {
-      const access = accessFor(request, reply, authToken);
+      const access = accessFor(request, reply, authToken, principal);
       if (!access) return;
       return services.context.build(
         request.body as ContextBuildRequest,

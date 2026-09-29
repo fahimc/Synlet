@@ -119,7 +119,9 @@ export class SqliteSourceStore implements SourceStorePort {
   }
 
   async search(query: string, limit: number, access: AccessContext) {
-    const phrase = `"${query.replaceAll('"', '""')}"`;
+    const terms = query.match(/[\p{L}\p{N}_]+/gu)?.slice(0, 32) ?? [];
+    if (!terms.length) return [];
+    const phrase = terms.map(term => `"${term.replaceAll('"', '""')}"`).join(" OR ");
     const rows = this.database.connection
       .prepare(
         `${chunkSelect} JOIN chunks_fts f ON f.chunk_id = c.chunk_id
@@ -225,6 +227,8 @@ export class SqliteSourceStore implements SourceStorePort {
         .prepare("SELECT chunk_id FROM chunks WHERE source_id = ?")
         .all(sourceId) as Row[];
       for (const row of chunkRows) {
+        const hasEmbeddings = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='embeddings'").get();
+        if (hasEmbeddings) db.prepare("DELETE FROM embeddings WHERE chunk_id=?").run(String(row.chunk_id));
         db.prepare("DELETE FROM chunks_fts WHERE chunk_id = ?").run(
           String(row.chunk_id),
         );

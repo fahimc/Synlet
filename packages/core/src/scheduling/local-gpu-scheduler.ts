@@ -28,6 +28,7 @@ export class LocalGpuScheduler {
   ) {}
 
   acquire(request: GpuRequest, signal: AbortSignal): Promise<GpuLease> {
+    if (Date.parse(request.deadlineUtc) <= Date.parse(this.clock.now())) return Promise.reject(new DomainError("TIMEOUT", "GPU request deadline expired"));
     if (request.memoryMiB <= 0 || request.memoryMiB > this.totalMemoryMiB) {
       return Promise.reject(
         new DomainError(

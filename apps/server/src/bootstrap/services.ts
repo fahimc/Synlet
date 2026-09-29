@@ -1,7 +1,8 @@
 import { resolve } from "node:path";
 
 import {
-  DeterministicTokenizer,
+  SqliteAgentCheckpoints,
+  SqliteAgentMemory,
   AgentToolRouter,
   FileArtifactStore,
   LlamaServerAdapter,
@@ -25,6 +26,7 @@ import {
 import type { RuntimeProfile } from "@synlet/contracts";
 import {
   ContextEngine,
+  AgentContext,
   AgentHarness,
   DomainError,
   LocalGpuScheduler,
@@ -44,6 +46,8 @@ export interface ServiceOverrides {
   readonly failAfterWrite?: boolean;
   readonly model?: ModelPort;
   readonly modelId?: string;
+  readonly capabilityRouter?: AgentCapabilityRouterPort;
+  readonly agentTools?: AgentToolPort;
 }
 
 export interface ServerServices {
@@ -75,7 +79,7 @@ export async function createServices(
   const hashes = new Sha256Hashes();
   const taskStore = new SqliteTaskStore(database);
   const sourceStore = new SqliteSourceStore(database);
-  const tokenizer = new DeterministicTokenizer();
+
   const artifactStore = new FileArtifactStore(resolve(dataRoot, "artifacts"));
   const models = await ModelRegistry.load(resolve(profile.paths.modelsLock));
   if (!overrides.model) await models.verifyArtifacts();
@@ -114,7 +118,7 @@ export async function createServices(
       new LocalGpuScheduler(
         ids,
         clock,
-        profile.scheduler.gpuMemoryMiB,
+        Math.max(1, profile.scheduler.gpuMemoryMiB - 2048),
         profile.scheduler.maxPendingInferenceJobs,
       ),
       new Map(
@@ -142,7 +146,7 @@ export async function createServices(
       : { failAfterWrite: overrides.failAfterWrite }),
   });
   const skills = new RuntimeSkillRegistry(resolve("skills"));
-  const agentTools = new AgentToolRouter(
+  const agentTools = overrides.agentTools ?? new AgentToolRouter(
     safeTools,
     new PlaywrightBrowserAdapter(
       resolve(profile.paths.browserExecutable),
@@ -152,18 +156,23 @@ export async function createServices(
     new McpClientManager(resolve("config/mcp.servers.json")),
     process.cwd(),
   );
-  const capabilityRouter = new PythonCapabilityRouter(
+  const pythonWorker = new PythonCapabilityRouter(
     resolve(profile.paths.pythonExecutable),
     resolve("services/python-worker"),
     {
-      SYNLET_JULIA_MODEL_ROOT: resolve("model-weights/Julia-1"),
-      SYNLET_EMBEDDING_MODEL_ROOT: resolve("model-weights/EmbeddingGemma-300m"),
+      SYNLET_JULIA_MODEL_ROOT: resolve(profile.paths.modelRoot, "Julia-1"),
+      SYNLET_EMBEDDING_MODEL_ROOT: resolve(profile.paths.modelRoot, "EmbeddingGemma-300m"),
       PYTHONPATH: resolve("services/python-worker/src"),
       JULIA_CPU_THREADS: "4",
     },
     ["-m", "synlet_worker.worker"],
   );
-  const embedding = models.enabledFor("embedding");
+  const capabilityRouter = overrides.capabilityRouter ?? pythonWorker;
+  const embedding = overrides.model ? undefined : models.enabledFor("embedding");
+  const tokenizer = {
+    count: (text: string) => model.countInput(controller.modelId, text),
+    countMessages: (messages: readonly {readonly role:"system"|"user";readonly content:string}[]) => model.countRequest ? model.countRequest({requestId:"context-count",modelId:controller.modelId,prompt:"",messages,maxOutputTokens:-1,deadlineUtc:new Date(Date.now()+30000).toISOString(),allowedTools:[]},AbortSignal.timeout(30000)) : model.countInput(controller.modelId,messages.map(m=>`${m.role}: ${m.content}`).join("\n")),
+  };
   const sources = embedding
     ? new SourceService(
         sourceStore,
@@ -171,7 +180,7 @@ export async function createServices(
         ids,
         clock,
         profile.limits.maxSourceBytes,
-        capabilityRouter,
+        pythonWorker,
         new SqliteEmbeddingIndex(database),
       )
     : new SourceService(
@@ -202,6 +211,7 @@ export async function createServices(
         : [];
     }),
   ];
+  const compactor = new ModelSourcePreservingCompactor(model, firstLlm.modelId, 300_000);
   const agent = new AgentHarness(
     new SqliteAgentRunStore(database),
     model,
@@ -220,6 +230,11 @@ export async function createServices(
       timeoutMs: 300_000,
       reasoning: controller.reasoning ?? "auto",
       specialists,
+      maxPending: profile.limits.maxPendingTasks,
+    },
+    {
+      checkpoints: new SqliteAgentCheckpoints(database),
+      context: new AgentContext(new SqliteAgentMemory(database, sources, sourceStore), model, compactor),
     },
   );
   return {
@@ -240,9 +255,9 @@ export async function createServices(
     ),
     sources,
     context: new ContextEngine(
-      sourceStore,
+      { search: async (query, _limit, access) => sources.search(query, access), scanAll: access => sourceStore.scanAll(access) },
       tokenizer,
-      new ModelSourcePreservingCompactor(model, firstLlm.modelId, 300_000),
+      compactor,
       {
         maxLookupRounds: profile.context.maxLookupRounds,
         maxInputTokens: profile.context.defaultInputTokens,

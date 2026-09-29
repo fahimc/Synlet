@@ -50,7 +50,14 @@ export const testModel = {
   },
   async *generate(request, signal) {
     signal.throwIfAborted();
-    const text = `TEST: ${request.prompt}`;
+    let text = `TEST: ${request.prompt}`;
+    if (request.requestId.includes("-skill-selection-")) text = JSON.stringify({skillId:null,reason:"test fixture"});
+    else if (request.requestId.includes("-review-")) text = JSON.stringify({accepted:true,requiresMoreEvidence:false,feedback:"test fixture only"});
+    else if (request.responseSchema?.oneOf) text = JSON.stringify({type:"answer",content:"TEST: scripted response",summary:"test fixture only"});
+    else if (request.requestId.startsWith("compact-")) {
+      const lines=JSON.parse(request.prompt.slice(request.prompt.lastIndexOf("\n\n")+2));
+      text=JSON.stringify({lineIds:lines.slice(0,1).map(line=>line.id)});
+    }
     yield { type: "text_delta", text };
     yield {
       type: "done",
@@ -62,7 +69,10 @@ export const testModel = {
 };
 
 export function testServices(overrides = {}) {
-  return { model: testModel, modelId: "qwen3-4b-q4-k-m", ...overrides };
+  return { model: testModel, modelId: "qwen3-4b-q4-k-m",
+    capabilityRouter: { route: async () => ({modelVersion:"TEST_ONLY",capabilities:{code:false,math:false,vision:false},probabilities:{code:0,math:0,vision:0}}) },
+    agentTools: {catalog:async()=>[],execute:async()=>{throw Error("No fake tools enabled")}},
+    ...overrides };
 }
 
 export function authHeaders(projectId = "project-a", actorId = "actor-a") {

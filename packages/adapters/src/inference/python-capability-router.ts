@@ -49,10 +49,15 @@ export class PythonCapabilityRouter
       readonly requestId: string;
       readonly taskId: string;
       readonly goal: string;
+      readonly hasImages?: boolean;
       readonly deadlineUtc: string;
     },
     signal: AbortSignal,
   ): Promise<AgentCapabilityRoute> {
+    signal.throwIfAborted();
+    const remainingMs = Date.parse(request.deadlineUtc) - Date.now();
+    if (remainingMs <= 0) throw new DomainError("TIMEOUT", "Worker deadline expired");
+    signal = AbortSignal.any([signal, AbortSignal.timeout(remainingMs)]);
     const child = this.ensureStarted();
     const response = await new Promise<WorkerResponse>((resolve, reject) => {
       const abort = () => {
@@ -74,7 +79,7 @@ export class PythonCapabilityRouter
         stepId: "route",
         deadlineUtc: request.deadlineUtc,
         operation: "route",
-        inputs: [JSON.stringify({ goal: request.goal })],
+        inputs: [JSON.stringify({ goal: request.goal, hasImages: request.hasImages === true })],
       };
       child.stdin.write(`${JSON.stringify(payload)}\n`, (error) => {
         if (!error) return;
@@ -106,6 +111,7 @@ export class PythonCapabilityRouter
       readonly requestId: string;
       readonly taskId: string;
       readonly inputs: readonly string[];
+      readonly purpose?: "query" | "document";
       readonly deadlineUtc: string;
     },
     signal: AbortSignal,
@@ -113,6 +119,10 @@ export class PythonCapabilityRouter
     readonly modelVersion: string;
     readonly vectors: readonly (readonly number[])[];
   }> {
+    signal.throwIfAborted();
+    const remainingMs = Date.parse(request.deadlineUtc) - Date.now();
+    if (remainingMs <= 0) throw new DomainError("TIMEOUT", "Worker deadline expired");
+    signal = AbortSignal.any([signal, AbortSignal.timeout(remainingMs)]);
     const child = this.ensureStarted();
     const response = await new Promise<WorkerResponse>((resolve, reject) => {
       const abort = () => {
@@ -133,7 +143,7 @@ export class PythonCapabilityRouter
           stepId: "embed",
           deadlineUtc: request.deadlineUtc,
           operation: "embed",
-          inputs: request.inputs,
+          inputs: request.inputs.map(text => JSON.stringify({ text, kind: request.purpose ?? "document" })),
         })}\n`,
         (error) => {
           if (!error) return;

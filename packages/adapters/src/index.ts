@@ -18,3 +18,10 @@ export * from "./skills/runtime-skill-registry.js";
 export * from "./browser/playwright-browser.js";
 export * from "./retrieval/sqlite-embedding-index.js";
 export * from "./observability/stage-timer.js";
+
+export * from "./storage/agent-checkpoints.js";
+export * from "./storage/agent-memory.js";
+export * from "./tools/full-control-files.js";
+export * from "./tools/host-command.js";
+
+export * from "./storage/host-lock.js";

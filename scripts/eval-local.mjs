@@ -24,7 +24,7 @@ for (const item of cases) {
   const generated = await generateLocal(item.prompt, { maxTokens: 24 });
   results.push({
     id: item.id,
-    passed: generated.text.toLowerCase().includes(item.expected),
+    passed: generated.text.trim() === item.expected,
     response: generated.text,
     elapsedMs: Number(generated.elapsedMs.toFixed(1)),
     modelId: generated.model.modelId,
@@ -32,7 +32,8 @@ for (const item of cases) {
 }
 const report = {
   schemaVersion: "synlet.eval-report/v1",
-  evidence: "MEASURED",
+  evidence: "MEASURED_SMOKE_ONLY_NOT_QUALITY_BENCHMARK",
+  limitations: "Three smoke prompts; not a specialist or end-to-end quality benchmark. Run held-out agent evaluations separately.",
   samples: results.length,
   passed: results.filter((item) => item.passed).length,
   results,

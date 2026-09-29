@@ -1,221 +1,68 @@
 import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
-
 import { DomainError } from "@synlet/core";
 import { chromium, type BrowserContext, type Page } from "playwright-core";
-
-export interface BrowserPolicy {
-  readonly allowedDomains: readonly string[];
-  readonly maxTextChars: number;
-  readonly headless: boolean;
-}
-
+export interface BrowserPolicy { readonly allowedDomains: readonly string[]; readonly maxTextChars: number; readonly headless: boolean }
 export class PlaywrightBrowserAdapter {
-  constructor(
-    private readonly executablePath: string,
-    private readonly profileRoot: string,
-    private readonly policy: BrowserPolicy,
-  ) {}
-
-  async inspect(url: string): Promise<{
-    readonly url: string;
-    readonly title: string;
-    readonly text: string;
-  }> {
-    return this.withPage(url, async (page) => ({
-      url: page.url(),
-      title: await page.title(),
-      text: (await page.locator("body").innerText()).slice(
-        0,
-        this.policy.maxTextChars,
-      ),
-    }));
+  private context: BrowserContext | undefined;
+  private page: Page | undefined;
+  private tail: Promise<unknown> = Promise.resolve();
+  constructor(private readonly executablePath: string, private readonly profileRoot: string, private readonly policy: BrowserPolicy) {}
+  async inspect(url: string, signal?: AbortSignal) { return this.withPage(url, page => this.observe(page), signal); }
+  async screenshot(url: string, signal?: AbortSignal) {
+    return this.withPage(url, async page => ({ ...(await this.observe(page)), imageDataUrl: `data:image/png;base64,${(await page.screenshot({ fullPage: false })).toString("base64")}` }), signal);
   }
-
-  async search(query: string): Promise<{
-    readonly url: string;
-    readonly title: string;
-    readonly observedAtUtc: string;
-    readonly items: readonly {
-      readonly title: string;
-      readonly url: string;
-      readonly description: string;
-    }[];
-    readonly text: string;
-  }> {
-    if (query.trim().length < 1 || query.length > 512)
-      throw new DomainError("INVALID_OUTPUT", "Search query is invalid");
+  async search(query: string, signal?: AbortSignal) {
+    if (!query.trim() || query.length > 2048) throw new DomainError("INVALID_OUTPUT", "Invalid search query");
     const url = `https://www.bing.com/search?format=rss&q=${encodeURIComponent(query)}`;
-    let response: Response | undefined;
-    let transportFailure: unknown;
-    for (let attempt = 1; attempt <= 3; attempt += 1) {
-      try {
-        response = await fetch(url, {
-          headers: { "user-agent": "Mozilla/5.0 Synlet/1.0" },
-          signal: AbortSignal.timeout(20_000),
-        });
-        if (response.ok || response.status < 500) break;
-      } catch (error: unknown) {
-        transportFailure = error;
-      }
-      if (attempt < 3)
-        await new Promise((resolveDelay) =>
-          setTimeout(resolveDelay, 250 * attempt),
-        );
-    }
-    if (!response)
-      throw new DomainError(
-        "CAPABILITY_UNAVAILABLE",
-        `Search transport failed after retries: ${transportFailure instanceof Error ? transportFailure.message : "unknown network error"}`,
-      );
-    if (!response.ok)
-      throw new DomainError(
-        "CAPABILITY_UNAVAILABLE",
-        `Search provider returned HTTP ${response.status}`,
-      );
-    const xml = await response.text();
-    const items = [
-      ...xml.matchAll(
-        /<item><title>([\s\S]*?)<\/title><link>([\s\S]*?)<\/link><description>([\s\S]*?)<\/description>/gu,
-      ),
-    ]
-      .slice(0, 10)
-      .map((match) => ({
-        title: decodeXml(match[1] ?? ""),
-        url: decodeXml(match[2] ?? ""),
-        description: decodeXml(match[3] ?? ""),
-      }));
-    if (items.length === 0)
-      throw new DomainError(
-        "INVALID_OUTPUT",
-        "Search provider returned no results",
-      );
-    return {
-      url,
-      title: `Search results for ${query}`,
-      observedAtUtc: new Date().toISOString(),
-      items,
-      text: items
-        .map(
-          (item, index) =>
-            `${index + 1}. ${item.title}\n${item.url}\n${item.description}`,
-        )
-        .join("\n\n")
-        .slice(0, this.policy.maxTextChars),
-    };
-  }
-
-  async clickAndObserve(
-    url: string,
-    role: "button" | "link",
-    name: string,
-  ): Promise<{
-    readonly url: string;
-    readonly title: string;
-    readonly text: string;
-  }> {
-    if (name.length < 1 || name.length > 256)
-      throw new DomainError("INVALID_OUTPUT", "Invalid accessible name");
-    return this.withPage(url, async (page) => {
-      await page.getByRole(role, { name, exact: true }).click();
-      await page.waitForLoadState("domcontentloaded");
-      return {
-        url: page.url(),
-        title: await page.title(),
-        text: (await page.locator("body").innerText()).slice(
-          0,
-          this.policy.maxTextChars,
-        ),
-      };
-    });
-  }
-
-  async typeAndObserve(
-    url: string,
-    label: string,
-    value: string,
-    submit: boolean,
-  ): Promise<{
-    readonly url: string;
-    readonly title: string;
-    readonly text: string;
-  }> {
-    if (label.length < 1 || label.length > 256 || value.length > 16_384)
-      throw new DomainError("INVALID_OUTPUT", "Invalid browser input");
-    return this.withPage(url, async (page) => {
-      const textbox = page.getByRole("textbox", { name: label, exact: true });
-      await textbox.fill(value);
-      if (submit) {
-        await textbox.press("Enter");
-        await page.waitForLoadState("domcontentloaded").catch(() => undefined);
-      }
-      return {
-        url: page.url(),
-        title: await page.title(),
-        text: `${await page.locator("body").innerText()}\n\n[Filled textbox: ${label} = ${value}]`.slice(
-          0,
-          this.policy.maxTextChars,
-        ),
-      };
-    });
-  }
-
-  private async withPage<T>(
-    url: string,
-    action: (page: Page) => Promise<T>,
-  ): Promise<T> {
     this.validateUrl(url);
-    await mkdir(this.profileRoot, { recursive: true });
-    let context: BrowserContext | undefined;
+    const combined = signal ? AbortSignal.any([signal, AbortSignal.timeout(30000)]) : AbortSignal.timeout(30000);
+    const response = await fetch(url, { headers: { "user-agent": "Mozilla/5.0 Synlet/1.0" }, signal: combined });
+    if (!response.ok) throw new DomainError("CAPABILITY_UNAVAILABLE", `Search provider HTTP ${response.status}`);
+    const xml = await response.text();
+    const items = [...xml.matchAll(/<item><title>([\s\S]*?)<\/title><link>([\s\S]*?)<\/link><description>([\s\S]*?)<\/description>/gu)].slice(0, 10).map(match => ({ title: decodeXml(match[1] ?? ""), url: decodeXml(match[2] ?? ""), description: decodeXml(match[3] ?? "") }));
+    if (!items.length) throw new DomainError("INVALID_OUTPUT", "Search returned no results");
+    return { url, title: `Search results for ${query}`, observedAtUtc: new Date().toISOString(), items, text: items.map((item, index) => `${index + 1}. ${item.title}\n${item.url}\n${item.description}`).join("\n\n") };
+  }
+  async clickAndObserve(url: string, role: "button" | "link", name: string, signal?: AbortSignal) {
+    return this.withPage(url, async page => { await page.getByRole(role, { name, exact: true }).click(); await page.waitForLoadState("domcontentloaded"); return this.observe(page); }, signal);
+  }
+  async typeAndObserve(url: string, label: string, value: string, submit: boolean, signal?: AbortSignal) {
+    return this.withPage(url, async page => { const box = page.getByRole("textbox", { name: label, exact: true }); await box.fill(value); if (submit) await box.press("Enter"); const observation = await this.observe(page); return { ...observation, text: `${observation.text}\n[Filled textbox: ${label} = ${value}]` }; }, signal);
+  }
+  async close(): Promise<void> { const context = this.context; this.context = undefined; this.page = undefined; await context?.close(); }
+  private async observe(page: Page) { const original = await page.locator("body").innerText(); return { url: page.url(), title: await page.title(), text: original.slice(0, this.policy.maxTextChars), truncated: original.length > this.policy.maxTextChars, observedAtUtc: new Date().toISOString() }; }
+  private async withPage<T>(url: string, action: (page: Page) => Promise<T>, signal?: AbortSignal): Promise<T> {
+    const previous = this.tail;
+    let release!: () => void;
+    this.tail = new Promise<void>(resolveQueue => { release = resolveQueue; });
+    await previous.catch(() => undefined);
+    let stopping: Promise<void> | undefined;
+    const abort = () => { stopping = this.close().catch(() => undefined); };
     try {
-      context = await chromium.launchPersistentContext(
-        resolve(this.profileRoot, "dedicated"),
-        {
-          executablePath: this.executablePath,
-          headless: this.policy.headless,
-        },
-      );
-      const page = context.pages()[0] ?? (await context.newPage());
-      await page.goto(url, { waitUntil: "commit", timeout: 30_000 });
-      await page
-        .locator("body")
-        .waitFor({ state: "attached", timeout: 15_000 });
+      signal?.throwIfAborted(); this.validateUrl(url);
+      await mkdir(this.profileRoot, { recursive: true });
+      if (!this.context) {
+        this.context = await chromium.launchPersistentContext(resolve(this.profileRoot, "dedicated"), { ...(this.executablePath ? { executablePath: this.executablePath } : {}), headless: this.policy.headless });
+        this.context.setDefaultTimeout(30000);
+        if (!this.policy.allowedDomains.includes("*")) await this.context.route("**/*", async route => { try { this.validateUrl(route.request().url()); await route.continue(); } catch { await route.abort(); } });
+        this.page = this.context.pages()[0] ?? await this.context.newPage();
+      }
+      signal?.addEventListener("abort", abort, { once: true });
+      if (signal?.aborted) { abort(); signal.throwIfAborted(); }
+      const page = this.page!;
+      // Preserve forms and navigation across multiple steps; do not reload the same URL on every action.
+      if (page.url() !== url) await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
       this.validateUrl(page.url());
-      return await action(page);
-    } finally {
-      await context?.close();
-    }
+      const result = await action(page);
+      signal?.throwIfAborted(); this.validateUrl(page.url());
+      return result;
+    } finally { signal?.removeEventListener("abort", abort); await stopping; release(); }
   }
-
   private validateUrl(value: string): void {
-    let url: URL;
-    try {
-      url = new URL(value);
-    } catch {
-      throw new DomainError("POLICY_DENIED", "Browser URL is invalid");
-    }
-    if (url.protocol !== "http:" && url.protocol !== "https:") {
-      throw new DomainError("POLICY_DENIED", "Browser protocol is not allowed");
-    }
-    if (
-      !this.policy.allowedDomains.includes("*") &&
-      !this.policy.allowedDomains.includes(url.hostname)
-    ) {
-      throw new DomainError(
-        "POLICY_DENIED",
-        "Browser domain is outside policy",
-      );
-    }
+    let url: URL; try { url = new URL(value); } catch { throw new DomainError("POLICY_DENIED", "Invalid browser URL"); }
+    if (!["http:", "https:"].includes(url.protocol)) throw new DomainError("POLICY_DENIED", "Browser URL must use HTTP(S)");
+    if (!this.policy.allowedDomains.includes("*") && !this.policy.allowedDomains.includes(url.hostname)) throw new DomainError("POLICY_DENIED", "Browser domain outside configured policy");
   }
 }
-
-function decodeXml(value: string): string {
-  return value
-    .replaceAll("&amp;", "&")
-    .replaceAll("&lt;", "<")
-    .replaceAll("&gt;", ">")
-    .replaceAll("&quot;", '"')
-    .replaceAll("&#39;", "'")
-    .replace(/<[^>]+>/gu, "")
-    .trim();
-}
+function decodeXml(value: string) { return value.replaceAll("&amp;", "&").replaceAll("&lt;", "<").replaceAll("&gt;", ">").replaceAll("&quot;", '"').replaceAll("&#39;", "'").replace(/<[^>]+>/gu, "").trim(); }

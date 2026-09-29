@@ -27,6 +27,7 @@ async function fixture(context, overrides = {}) {
   const app = await createServer({
     profile: testProfile,
     authToken: "test-token",
+    principal: { actorId: "actor-a", projectIds: ["project-a"] },
     services: testServices({
       databasePath: join(root, "synlet.sqlite"),
       dataRoot: join(root, "data"),
@@ -155,7 +156,7 @@ test("action hash, task revision, scope, and path remain bound", async (context)
     url: "/api/v1/approvals",
     headers: authHeaders("project-b"),
   });
-  assert.deepEqual(scoped.json(), []);
+  assert.equal(scoped.statusCode, 403);
 
   const traversalTask = await task(app, "traversal-task");
   const traversal = await propose(app, traversalTask.taskId, "file.patch", {

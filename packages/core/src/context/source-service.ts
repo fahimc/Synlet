@@ -70,39 +70,33 @@ export class SourceService {
       deleted: false,
     };
     const chunks = chunkText(request.content, this.ids);
-    const stored = await this.store.add({ source, chunks }, access);
-    if (this.embeddings && this.semanticIndex && chunks.length > 0) {
-      const timeout = AbortSignal.timeout(300_000);
-      const embedded = await this.embeddings.embed(
-        {
-          requestId: this.ids.next("embedding"),
-          taskId: source.sourceId,
-          inputs: chunks.map((chunk) => chunk.text),
-          deadlineUtc: new Date(Date.now() + 300_000).toISOString(),
-        },
-        timeout,
-      );
-      if (embedded.vectors.length !== chunks.length)
-        throw new DomainError(
-          "INVALID_OUTPUT",
-          "Embedding count does not match source chunks",
-        );
-      for (let index = 0; index < chunks.length; index += 1) {
-        const chunk = chunks[index];
-        const vector = embedded.vectors[index];
-        if (!chunk || !vector)
-          throw new DomainError(
-            "INVALID_OUTPUT",
-            "Embedding result is missing a source chunk or vector",
-          );
-        this.semanticIndex.upsert(
-          chunk.chunkId,
-          embedded.modelVersion,
-          vector,
-          access,
-        );
+    // Validate/batch all vectors before committing source/index records. A failed worker call
+    // cannot leave a half-indexed source that looks complete or duplicate it on retry.
+    const vectors: (readonly number[])[] = [];
+    let modelVersion = "";
+    if (this.embeddings && this.semanticIndex && chunks.length) {
+      try {
+        for (let offset = 0; offset < chunks.length; offset += 64) {
+          const batch = chunks.slice(offset, offset + 64);
+          const embedded = await this.embeddings.embed({
+            requestId: this.ids.next("embedding"), taskId: source.sourceId,
+            inputs: batch.map(chunk => chunk.text), purpose: "document",
+            deadlineUtc: new Date(Date.now() + 300000).toISOString(),
+          }, AbortSignal.timeout(300000));
+          if (embedded.vectors.length !== batch.length || (modelVersion && modelVersion !== embedded.modelVersion)) throw new DomainError("INVALID_OUTPUT", "Embedding batch count/version mismatch");
+          modelVersion = embedded.modelVersion;
+          for (const vector of embedded.vectors) {
+            if (!vector.length || vector.some(value => !Number.isFinite(value)) || (vectors[0] && vector.length !== vectors[0].length)) throw new DomainError("INVALID_OUTPUT", "Invalid embedding dimension/value");
+            vectors.push(vector);
+          }
+        }
+      } catch (error) {
+        if (await this.store.artifactReferenceCount(artifact.hash) === 0) await this.artifacts.delete(artifact.hash);
+        throw error;
       }
     }
+    const stored = await this.store.add({ source, chunks }, access);
+    if (this.semanticIndex && modelVersion) for (let index = 0; index < chunks.length; index++) this.semanticIndex.upsert(chunks[index]!.chunkId, modelVersion, vectors[index]!, access);
     return stored;
   }
 
@@ -120,6 +114,7 @@ export class SourceService {
         requestId: this.ids.next("embedding"),
         taskId: this.ids.next("search"),
         inputs: [query],
+        purpose: "query",
         deadlineUtc: new Date(Date.now() + 300_000).toISOString(),
       },
       AbortSignal.timeout(300_000),
