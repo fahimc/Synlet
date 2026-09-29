@@ -8,7 +8,7 @@ def edit(path, fn):
 
 edit('packages/adapters/src/tools/agent-tool-router.ts',lambda s:s.replace('import Ajv from "ajv";', 'import { Ajv } from "ajv";'))
 edit('apps/server/src/bootstrap/create-server.ts',lambda s:s.replace('? async () => undefined','? () => Promise.resolve()'))
-edit('apps/web/src/main.tsx',lambda s:s.replace('sessionStorage.getItem("synlet-operator-token")!', '(sessionStorage.getItem("synlet-operator-token") ?? "")').replace('operatorToken!', '(operatorToken ?? "")'))
+edit('apps/web/src/main.tsx',lambda s:s.replace('box.querySelector("input")!.value.trim()', '(box.querySelector("input")?.value.trim() ?? "")'))
 edit('packages/adapters/src/browser/playwright-browser.ts',lambda s:s.replace('this.context!.newPage()', 'this.context.newPage()'))
 edit('packages/adapters/src/tools/host-command.ts',lambda s:s.replace('command: args.command!,','command: args.command ?? "",'))
 
@@ -91,12 +91,12 @@ def harness(s):
     s=s.replace('String(review.feedback ?? "Invalid review")','typeof review.feedback === "string" ? review.feedback : "Invalid review"')
     s=s.replace('const value = JSON.parse(text) as Record<string, unknown>;','const parsed: unknown = JSON.parse(text);\n  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new DomainError("INVALID_OUTPUT", "Invalid decision object");\n  const value = parsed as Record<string, unknown>;')
     s=s.replace('    !value ||\n    typeof value !== "object" ||\n    Array.isArray(value) ||\n','')
-    needle='          const checks = observations.filter'
+    needle='          const checks = observations'
     if needle not in s: raise RuntimeError('Final answer capture insertion not found')
     s=s.replace(needle,'          await this.services.context?.complete(original, decision.content, access);\n'+needle,1)
     return s
 edit('packages/core/src/orchestration/agent-harness.ts',harness)
-edit('tests/unit/review-regressions.test.mjs',lambda s:s.replace('for await (const _event of completionEvents(response, 0)) {','for await (const event of completionEvents(response, 0)) {\n        assert.equal(event.type, "text_delta");'))
+edit('tests/unit/review-regressions.test.mjs',lambda s:s.replace('for await (const _event of completionEvents(new Response(stream), 1)) {\n        /* drain */','for await (const event of completionEvents(new Response(stream), 1)) {\n        assert.equal(event.type, "text_delta");'))
 edit('packages/core/src/orchestration/agent-session.ts',lambda s:s.replace('export interface AgentMemoryPort {','export interface AgentMemoryPort {\n  answer?(run: AgentRunRecord, text: string, access: AccessContext): Promise<void>;'))
 
 def memory(s):
@@ -117,8 +117,8 @@ def packet(s):
     s=s.replace('  release(runId: string): void {','''  async complete(run: AgentRunRecord, text: string, access: AccessContext): Promise<void> { await this.memory.answer?.(run,text,access); }
   release(runId: string): void {''')
     s=s.replace(')) as Json;', '));').replace('return { ...chunk.ref, text: chunk.text, stale: chunk.stale } as Json;', 'return { ...chunk.ref, text: chunk.text, stale: chunk.stale };')
-    s=s.replace('    const base = request.prompt;', '''    // Originals, including wire roles, were archived by begin(). Keep system/developer
-    // constraints intact; replace oldest conversation messages with explicit lookup pointers.
+    s=s.replace('    const base = request.prompt;', '''    // Originals, including wire roles, were archived by begin(). Preserve system/developer
+    // instructions and replace old conversation content with explicit lookup pointers.
     const remainingMessages=[...(request.messages ?? [])];
     let removedMessages=0;
     while ((await count({...request,messages:remainingMessages})) > allowance) {
@@ -133,5 +133,6 @@ def packet(s):
     s=s.replace('if ((await count(build([...added, text]))) > allowance) {','if ((await count(build([...added, text]))) > allowance && compactionAttempts < 2) {\n        compactionAttempts++;',1)
     return s
 edit('packages/core/src/context/agent-context.ts',packet)
-# Autofix style-only lint suggestions, preserving every configured rule and test.
+# Install exactly the current lock before invoking the existing lint auto-fixer.
+subprocess.run(['pnpm','install','--frozen-lockfile'],check=True)
 subprocess.run(['pnpm','exec','eslint','apps','packages','tests','--fix'],check=False)
