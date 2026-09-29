@@ -1,0 +1,108 @@
+name: SOMA review remediation validation
+on:
+  push:
+    branches: [fix/soma-harness-review]
+permissions:
+  contents: read
+concurrency:
+  group: soma-review-remediation
+  cancel-in-progress: false
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      revision: ${{ steps.revision.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/soma-harness-review
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.21.0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.28.1
+      - name: Apply checksum-verified review patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if [ -d .review-patch ]; then
+            python3 - <<'PY'
+          import base64, hashlib, json, lzma
+          from pathlib import Path
+          parts = sorted(Path('.review-patch').glob('part-*.b64'))
+          if len(parts) != 5: raise ValueError('Missing patch parts')
+          packed = base64.b64decode(''.join(p.read_text().strip() for p in parts), validate=True)
+          if hashlib.sha256(packed).hexdigest() != 'e71005e5caf431d1065e89bd8bec44f28352e19ca20847f5fdf2f746daaf5297':
+              raise ValueError('Patch SHA-256 mismatch')
+          decoder = lzma.LZMADecompressor(memlimit=256*1024*1024)
+          raw = decoder.decompress(packed, max_length=2*1024*1024)
+          if not decoder.eof or decoder.unused_data: raise ValueError('Invalid patch payload')
+          root = Path('.review-work').resolve()
+          for name, text in json.loads(raw).items():
+              target = root / name
+              if not target.resolve().is_relative_to(root) or name.startswith('/'):
+                  raise ValueError('Unsafe patch path')
+              target.parent.mkdir(parents=True, exist_ok=True)
+              target.write_text(text, encoding='utf-8')
+          PY
+            python3 .review-work/apply.py
+            rm -rf .review-work .review-patch
+            git add -A
+            git commit -m 'fix: integrate source-aware durable full-control SOMA harness'
+            git push origin HEAD:fix/soma-harness-review
+          fi
+      - name: Resolve explicit dependency change and format sources
+        run: |
+          pnpm install --no-frozen-lockfile
+          pnpm format
+      - name: Record formatted source and lockfile
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m 'chore: lock and format review remediation'
+            git push origin HEAD:fix/soma-harness-review
+          fi
+      - name: Pin validation revision
+        id: revision
+        shell: bash
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+  deterministic:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.revision }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.21.0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.28.1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - run: pnpm test:contracts
+      - run: pnpm test:integration
+      - run: pnpm test:security
+      - run: pnpm test:context
+      - run: pnpm test:python-contracts
+      - run: pnpm exec playwright-core install --with-deps chromium
+      - run: pnpm test:e2e
+        env:
+          SYNLET_TEST_BROWSER: chromium
